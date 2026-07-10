@@ -1,0 +1,10 @@
+eventlet
+Flask
+flask-sqlalchemy
+flask-socketio
+python-dotenv
+PyJWT
+flask-cors
+python-barcode
+requests
+PyMySQL

@@ -1,0 +1,221 @@
+import { useState, useEffect } from "react";
+
+const ExitPingHandler = () => {
+  const [exitData, setExitData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [paymentHistory, setPaymentHistory] = useState(() => {
+    const saved = localStorage.getItem("paymentHistory");
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [newArrival, setNewArrival] = useState(false);
+  const [showSnackBar, setShowSnackBar] = useState(false); // Control snack bar visibility
+  const [newVehicleData, setNewVehicleData] = useState([]); // Array to hold all new arrivals
+
+  // Fetch exit data and handle API response
+  useEffect(() => {
+    const fetchExitData = async () => {
+      try {
+        const response = await fetch("http://127.0.0.1:5000/exit_ping_on_exit");
+        if (!response.ok)
+          throw new Error(`HTTP error! Status: ${response.status}`);
+
+        const data = await response.json();
+
+        // Check if data is new
+        const isNew =
+          !exitData ||
+          data.license_plate !== exitData.license_plate ||
+          data.exit_time !== exitData.exit_time;
+
+        if (isNew) {
+          console.log("New vehicle exit data received:", data);
+          setExitData(data);
+
+          setNewArrival(true);
+          setShowSnackBar(true); // Show snack bar when new arrival is detected
+
+          // Hide the snack bar after 5 seconds
+          setTimeout(() => {
+            setShowSnackBar(false);
+            setNewArrival(false);
+          }, 5000); // Snack bar will disappear after 5 seconds
+        }
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchExitData(); // Initial fetch
+    const interval = setInterval(fetchExitData, 5000); // Poll every 5 seconds
+
+    return () => clearInterval(interval); // Cleanup on unmount
+  }, [exitData]); // re-run when exitData changes
+
+  const handlePayment = async (index, method) => {
+    const updatedData = [...newVehicleData];
+    const paymentPayload = {
+      license_plate: updatedData[index].license_plate,
+      payment_status: "paid", // This will always be 'paid' after payment
+      payment_mode: method, // Either 'card' or 'cash'
+    };
+
+    try {
+      // Send payment data to the API
+      const response = await fetch("http://localhost:5000/payment_status", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(paymentPayload),
+      });
+
+      const result = await response.json(); // To get the response and log it
+
+      if (!response.ok) {
+        console.error("API response error:", result);
+        throw new Error(`Payment API failed: ${response.status}`);
+      }
+
+      // Mark payment as completed in the UI
+      updatedData[index] = {
+        ...updatedData[index],
+        paymentStatus: "paid",
+        paymentMethod: method,
+        paidAt: new Date().toISOString(),
+      };
+
+      setNewVehicleData(updatedData);
+      setPaymentHistory((prev) => {
+        const updated = [...prev, updatedData[index]];
+        localStorage.setItem("paymentHistory", JSON.stringify(updated));
+        return updated;
+      });
+
+      console.log("Payment recorded successfully:", result);
+    } catch (error) {
+      console.error("Payment submission failed:", error);
+      alert("Failed to record payment. Please try again.");
+    }
+  };
+
+  const handleShowNewArrival = () => {
+    setNewVehicleData((prevData) => [...prevData, exitData]); // Store new vehicle data in an array
+    setShowSnackBar(false); // Hide the snack bar
+  };
+
+  return (
+    <div className="p-6">
+      {/* Snack Bar for New Arrival */}
+      {showSnackBar && (
+        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 p-4 bg-yellow-500 text-white rounded-lg shadow-lg flex justify-between items-center w-72">
+          <span>New Vehicle Arrival</span>
+          <button
+            onClick={handleShowNewArrival}
+            className="ml-4 bg-yellow-700 text-white py-1 px-3 rounded-md"
+          >
+            Show
+          </button>
+        </div>
+      )}
+
+      {/* Display New Arrivals Below Previous Cards */}
+      <div className="space-y-6 mt-8">
+        {newVehicleData.map((vehicle, index) => (
+          <div
+            key={index}
+            className="bg-white rounded-xl shadow-lg p-6 space-y-6 transition-all duration-500"
+          >
+            <h2 className="text-2xl font-bold text-center text-gray-800">
+              Payment Summary (Arrival {index + 1})
+            </h2>
+            {loading && <p>Loading...</p>}
+            {error && <p className="text-red-600">{error}</p>}
+            {vehicle && !loading && !error && (
+              <div>
+                <p>
+                  <strong>License Plate:</strong> {vehicle.license_plate}
+                </p>
+                <p>
+                  <strong>Entry Time:</strong>{" "}
+                  {new Date(vehicle.entry_time).toLocaleString()}
+                </p>
+                <p>
+                  <strong>Exit Time:</strong>{" "}
+                  {new Date(vehicle.exit_time).toLocaleString()}
+                </p>
+                <p>
+                  <strong>Duration:</strong> {vehicle.duration.toFixed(2)} hours
+                </p>
+                <p>
+                  <strong>Amount Due:</strong> OMR{" "}
+                  {vehicle.payable_amount.toFixed(3)}
+                </p>
+              </div>
+            )}
+
+            {/* Show Payment Options */}
+            {!vehicle.paymentCompleted && (
+              <div>
+                <button
+                  onClick={() => handlePayment(index, "Cash")}
+                  className="bg-green-500 text-white py-2 px-4 rounded-md mr-2"
+                >
+                  Pay by Cash
+                </button>
+                <button
+                  onClick={() => handlePayment(index, "Card")}
+                  className="bg-blue-500 text-white py-2 px-4 rounded-md"
+                >
+                  Pay by Card
+                </button>
+              </div>
+            )}
+
+            {/* If payment is completed, show success message */}
+            {vehicle.paymentCompleted && (
+              <p className="text-green-500">Payment Success! Thank you.</p>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Payment History Table */}
+      <div className="mt-6">
+        <h3 className="text-xl font-bold">Past Payments</h3>
+        <table className="table-auto w-full mt-2">
+          <thead>
+            <tr>
+              <th className="border px-4 py-2">License Plate</th>
+              <th className="border px-4 py-2">Entry Time</th>
+              <th className="border px-4 py-2">Exit Time</th>
+              <th className="border px-4 py-2">Amount</th>
+              <th className="border px-4 py-2">Payment Method</th>
+            </tr>
+          </thead>
+          <tbody>
+            {paymentHistory.map((payment, index) => (
+              <tr key={index}>
+                <td className="border px-4 py-2">{payment.license_plate}</td>
+                <td className="border px-4 py-2">
+                  {new Date(payment.entry_time).toLocaleString()}
+                </td>
+                <td className="border px-4 py-2">
+                  {new Date(payment.exit_time).toLocaleString()}
+                </td>
+                <td className="border px-4 py-2">
+                  OMR {payment.payable_amount.toFixed(3)}
+                </td>
+                <td className="border px-4 py-2">{payment.paymentMethod}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+export default ExitPingHandler;

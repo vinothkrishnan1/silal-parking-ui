@@ -1,0 +1,98 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Parking Slip</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: monospace;
+            background: white;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .slip {
+            width: 100%;
+            max-width: 400px;
+            height: 100%;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            text-align: center;
+        }
+        h2 {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        .barcode {
+            margin: 20px auto;
+        }
+        .info {
+            font-size: 18px;
+            text-align: left;
+            margin: 20px 0;
+            line-height: 2.2;
+        }
+        .footer {
+            font-size: 16px;
+            margin-top: 20px;
+        }
+        hr {
+            border: none;
+            border-top: 2px dashed #000;
+            margin: 20px 0;
+        }
+        button {
+            font-size: 18px;
+            padding: 12px 24px;
+            margin-top: 20px;
+            background: black;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        @media print {
+            button {
+                display: none;
+            }
+            html, body {
+                height: auto;
+                margin: 0;
+                padding: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="slip">
+        <div>
+            <h2>LIFELINE HOSPITAL</h2>
+            <h3>Falaj Al Qabail, Sohar, Sultanate of Oman.
+Tel: 26651111, Fax: 26651122</h3>
+            <h3>Parking Slip</h3>
+            <hr>
+            <div class="barcode"><img src="data:image/png;base64,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woUL9ewnT56sSGjMjhw5Yt5Xmpqa6vbPdVWaESNG6EW999571md0uVx9+/Y1Zpw2bZqNQ2Ort07h4eGdOnVSSu3cufOff/7x+Gx8fLzT6VRKmf+a+Ytly5aVeZSkVq1aU6dO9fKGqET6XVLXrl11qSv33VPv3r2fe+45/aG5Hf61rkozceJEPd63b5/1GVetWvXDDz8opaKioszvwuzHVqHREblz587WrVs9PrVx40ZjEB0drWyqT58+epyenl7m9JcuXUpJSTHGQ4YM6dChQ9u2bSV205hfWEZGhvLDdeWF8efN8Pfff1uc68qVK2+++aaxT3rp0qXK1uwWmnHjxnlkxZCZmfn9998bewf175L9NG7cWI+zsrLKnH779u36X5Uauzb0IZvk5GQrS7BI7/1RSt28eVP54brywrx7xdhqtmLWrFk5OTlKqRkzZoSGhipbs1toOnbs+Oijjyql9uzZc+PGDf34pk2bXC6Xn75vsu769et6XLdu3TKn19t9wcHBvXv3NofG5XIlJiZW1gu7dOmSHjdo0ED54bry4rffftPj1q1bW5ll9+7dmzZtUko1adLEvGvMruwWGp2SwsLCzZs36wc3bNhg7O+08fsmpdTvv/+uxw899JD3iXNzc/fv32+MBw4caBz7GDhwoN5xW4nvnvbs2aPH3bt3V/62rrxbtWqVHusjm17k5eW9+uqrxjguLi4kJETZnQ1DU/zd09mzZ48fP66U6tevX8uWLZV9mfezDh482PvEe/bs0WcV6Ynr1q3bq1cvY7x3795KOe1o06ZNhw4dMsZBQUFVZKPSp3VVGrfb/e677+ozcZo1azZlypQy53rnnXeMQ5bdunV78cUX1X3AhqFp06ZNz549lVIHDx68cuWKuThV5EdcSEZGxu7du4sHtzTmDRbz2bR6nJeX59MxFDOn05mVlbVv376XXnopJibGeNDhcHz66afmnSP+sq48FBQUnD9/ft26df369Xv77beNB4ODgxMSEurXr+993tTU1CVLlhjjjz/+uFo1G/4OlsBto/NoPvroI+NBvQ9/+fLlbrfbOGsmICDg8uXLxgRWzqPxifR5NFYMGzZMLzYqKsr7xEVFRfoX3uP0vGPHjunlTJkypVIuQVBKhYaGer8MrcquK4N5N1NxgwcPPn36dJkLKSoq0huMHucumn+SOY/GP0RHRxt/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" alt="Barcode" width="320" height="100"></div>
+            <hr>
+            <div class="info">
+<p><strong>Vehicle Number:</strong> MH12AB1234</p>
+<p><strong>Date:</strong> 2025-05-06</p>
+<p><strong>Entry-Time:</strong> 14:30:00</p>
+
+            </div>
+            <hr>
+        </div>
+        <div class="footer">
+            Thank you for using our parking service.<br>
+            Please keep this slip safe.
+        </div>
+        <button onclick="window.print()">Print Slip</button>
+    </div>
+</body>
+</html>

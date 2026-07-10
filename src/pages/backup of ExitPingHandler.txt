@@ -1,0 +1,265 @@
+import { useState, useEffect } from "react";
+import {
+  FaCar,
+  FaClock,
+  FaMoneyBillWave,
+  FaCheckCircle,
+  FaTimesCircle,
+} from "react-icons/fa";
+
+const ExitPingHandler = () => {
+  const [exitData, setExitData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [showPaymentOptions, setShowPaymentOptions] = useState(false);
+  const [paymentCompleted, setPaymentCompleted] = useState(false);
+  const [paymentHistory, setPaymentHistory] = useState(() => {
+    const saved = localStorage.getItem("paymentHistory");
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [newArrival, setNewArrival] = useState(false);
+
+  useEffect(() => {
+    const fetchExitData = async () => {
+      try {
+        const response = await fetch("http://127.0.0.1:5000/exit_ping_on_exit");
+        if (!response.ok)
+          throw new Error(`HTTP error! Status: ${response.status}`);
+
+        const data = await response.json();
+
+        // Check if data is new
+        const isNew =
+          !exitData ||
+          data.license_plate !== exitData.license_plate ||
+          data.exit_time !== exitData.exit_time;
+
+        if (isNew) {
+          console.log("New vehicle exit data received:", data);
+          setExitData(data);
+          setPaymentCompleted(false); // reset to allow new payment
+          setShowPaymentOptions(false);
+          setNewArrival(true);
+
+          // Reset newArrival after 1 second
+          setTimeout(() => setNewArrival(false), 1000); // fade-out after 1 second
+        }
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    // Start polling
+    fetchExitData(); // initial load
+    const interval = setInterval(fetchExitData, 5000); // every 5 seconds
+
+    return () => clearInterval(interval); // cleanup
+  }, [exitData]);
+
+  const handleProceedToPayment = () => {
+    setShowPaymentOptions(true);
+  };
+
+  const handlePayment = (method) => {
+    const newPayment = {
+      ...exitData,
+      paymentMethod: method,
+      paidAt: new Date().toISOString(),
+    };
+
+    setPaymentHistory((prev) => {
+      const updated = [...prev, newPayment];
+      localStorage.setItem("paymentHistory", JSON.stringify(updated)); // save to localStorage
+      return updated;
+    });
+
+    setPaymentCompleted(true);
+    setShowPaymentOptions(false);
+  };
+  const handleClearHistory = () => {
+    setPaymentHistory([]);
+    localStorage.removeItem("paymentHistory");
+  };
+
+  if (loading) {
+    return (
+      <div className="p-6 bg-white rounded-lg shadow text-center">
+        <p className="text-gray-600">Loading vehicle exit data...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6 bg-red-100 rounded-lg shadow text-center">
+        <h3 className="text-xl font-semibold text-red-800">Error</h3>
+        <p className="text-red-600">{error}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`max-w-4xl mx-auto space-y-8 p-6 transition-all duration-500 
+      ${newArrival ? "bg-yellow-100 border-4 border-yellow-500 shadow-lg" : ""}
+  `}
+    >
+      {/* Payment Card */}
+      <div
+        className={`bg-white rounded-xl shadow-lg p-6 space-y-6 transition-all duration-500
+    ${newArrival ? "bg-yellow-100 border-4 border-yellow-500 shadow-lg" : ""}
+  `}
+      >
+        <h2 className="text-2xl font-bold text-center text-gray-800">
+          Payment Summary
+        </h2>
+
+        {!paymentCompleted && (
+          <>
+            <div className="flex items-center gap-4 p-4 bg-blue-50 rounded-md">
+              <FaCar className="text-blue-700 text-xl" />
+              <div>
+                <p className="text-gray-800 font-semibold">
+                  License Plate: {exitData.license_plate}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4 p-4 bg-green-50 rounded-md">
+              <FaClock className="text-green-700 text-xl" />
+              <div>
+                <p>Entry: {new Date(exitData.entry_time).toLocaleString()}</p>
+                <p>Exit: {new Date(exitData.exit_time).toLocaleString()}</p>
+                <p>Duration: {exitData.duration.toFixed(2)} hours</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4 p-4 bg-yellow-50 rounded-md border border-yellow-300">
+              <FaMoneyBillWave className="text-yellow-600 text-xl" />
+              <div>
+                <p className="text-lg font-semibold">
+                  OMR {exitData.payable_amount.toFixed(3)}
+                </p>
+              </div>
+            </div>
+
+            <div className="text-center">
+              {!showPaymentOptions ? (
+                <button
+                  onClick={handleProceedToPayment}
+                  className="mt-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded shadow"
+                >
+                  Proceed to Payment
+                </button>
+              ) : (
+                <div className="space-x-4 mt-4">
+                  <button
+                    onClick={() => handlePayment("Cash")}
+                    className="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded"
+                  >
+                    Pay with Cash
+                  </button>
+                  <button
+                    onClick={() => handlePayment("Card")}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded"
+                  >
+                    Pay with Card
+                  </button>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        {paymentCompleted && (
+          <div className="bg-green-50 border border-green-300 p-4 rounded-md">
+            <div className="flex items-center gap-2 text-green-700 mb-4">
+              <FaCheckCircle className="text-xl" />
+              <h3 className="text-lg font-bold">Payment Successful</h3>
+            </div>
+            <p>
+              <strong>License Plate:</strong> {exitData.license_plate}
+            </p>
+            <p>
+              <strong>Entry:</strong>{" "}
+              {new Date(exitData.entry_time).toLocaleString()}
+            </p>
+            <p>
+              <strong>Exit:</strong>{" "}
+              {new Date(exitData.exit_time).toLocaleString()}
+            </p>
+            <p>
+              <strong>Duration:</strong> {exitData.duration.toFixed(2)} hours
+            </p>
+            <p>
+              <strong>Paid Amount:</strong> OMR{" "}
+              {exitData.payable_amount.toFixed(3)}
+            </p>
+            <p>
+              <strong>Status:</strong>{" "}
+              <span className="text-green-700">{exitData.status}</span>
+            </p>
+            <p className="text-sm text-gray-600">{exitData.message}</p>
+          </div>
+        )}
+      </div>
+
+      {/* Payment History Table */}
+      {paymentHistory.length > 0 && (
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <h3 className="text-xl font-bold mb-4 text-gray-800">
+            Past Payments
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="min-w-full table-auto border">
+              <thead>
+                <tr className="bg-gray-100 text-left text-sm text-gray-600">
+                  <th className="px-4 py-2 border">License Plate</th>
+                  <th className="px-4 py-2 border">Entry Time</th>
+                  <th className="px-4 py-2 border">Exit Time</th>
+                  <th className="px-4 py-2 border">Duration</th>
+                  <th className="px-4 py-2 border">Amount</th>
+                  <th className="px-4 py-2 border">Method</th>
+                  <th className="px-4 py-2 border">Paid At</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paymentHistory.map((item, idx) => (
+                  <tr key={idx} className="text-sm text-gray-800">
+                    <td className="px-4 py-2 border">{item.license_plate}</td>
+                    <td className="px-4 py-2 border">
+                      {new Date(item.entry_time).toLocaleString()}
+                    </td>
+                    <td className="px-4 py-2 border">
+                      {new Date(item.exit_time).toLocaleString()}
+                    </td>
+                    <td className="px-4 py-2 border">
+                      {item.duration.toFixed(2)} hrs
+                    </td>
+                    <td className="px-4 py-2 border">
+                      OMR {item.payable_amount.toFixed(3)}
+                    </td>
+                    <td className="px-4 py-2 border">{item.paymentMethod}</td>
+                    <td className="px-4 py-2 border">
+                      {new Date(item.paidAt).toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <button
+              onClick={handleClearHistory}
+              className="mt-4 bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded"
+            >
+              Clear History
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default ExitPingHandler;
