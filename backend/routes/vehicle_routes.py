@@ -183,6 +183,8 @@ def get_dashboard_data():
             'enteredToday': entered_today,
             'exitedToday': exited_today,
             'revenueToday': total_revenue,
+            'visitorRevenueToday': visitor_revenue,
+            'tenantRevenueToday': sub_revenue,
             'vehicleFlow': vehicle_flow,
             'typeDistribution': {
                 'staff': staff_pct,
@@ -203,7 +205,7 @@ def get_dashboard_data():
 @vehicle_bp.route('/reports', methods=['GET'])
 def get_reports():
     """
-    Returns a list of vehicles for reports with filtering and sorting.
+    Returns a list of vehicles and/or subscriptions for reports with filtering and sorting.
     """
     try:
         from flask import request
@@ -213,49 +215,107 @@ def get_reports():
         end_date_str = request.args.get('end_date')
         search = request.args.get('search', '')
         vehicle_type = request.args.get('type', 'all') # Staff, Visitor, Tenant
-        
-        query = Vehicle.query
-        
-        if start_date_str:
-            start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
-            query = query.filter(Vehicle.entry_time >= start_date)
-            
-        if end_date_str:
-            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').replace(hour=23, minute=59, second=59)
-            query = query.filter(Vehicle.entry_time <= end_date)
-            
-        if search:
-            query = query.filter(Vehicle.license_plate.ilike(f'%{search}%'))
-            
-        if vehicle_type != 'all':
-            query = query.filter(Vehicle.vehicle_category == vehicle_type)
-            
-        vehicles = query.order_by(Vehicle.entry_time.desc()).all()
+        payment_type = request.args.get('payment_type', 'all') # visitor, tenant, all
         
         result = []
-        for v in vehicles:
-            duration_str = "-"
-            if v.entry_time:
-                end_time = v.exit_time or datetime.utcnow()
-                diff = end_time - v.entry_time
-                hours = int(diff.total_seconds() // 3600)
-                minutes = int((diff.total_seconds() % 3600) // 60)
-                duration_str = f"{hours}h {minutes}m"
-                
-            result.append({
-                'id': v.id,
-                'vehicleNumber': v.license_plate,
-                'entryTime': v.entry_time.strftime('%Y-%m-%d %H:%M:%S') if v.entry_time else None,
-                'exitTime': v.exit_time.strftime('%Y-%m-%d %H:%M:%S') if v.exit_time else None,
-                'type': v.vehicle_category or 'Visitor',
-                'status': 'Exited' if v.exit_time else 'Inside',
-                'duration': duration_str,
-                'paymentMode': v.payment_mode.capitalize() if v.payment_mode else '-',
-                'paymentAmount': f"{v.payable_amount:.3f}" if v.payable_amount is not None else "0.000",
-                'paymentStatus': v.payment_status.capitalize() if v.payment_status else 'Pending',
-                'collectedBy': v.verifier.username if v.verifier else ('System' if v.payment_status == 'paid' else '-')
-            })
+        
+        # 1. Fetch Vehicle Reports (Visitor Payments) if payment_type is 'all' or 'visitor'
+        if payment_type in ('all', 'visitor'):
+            query = Vehicle.query
             
+            if start_date_str:
+                start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
+                query = query.filter(Vehicle.entry_time >= start_date)
+                
+            if end_date_str:
+                end_date = datetime.strptime(end_date_str, '%Y-%m-%d').replace(hour=23, minute=59, second=59)
+                query = query.filter(Vehicle.entry_time <= end_date)
+                
+            if search:
+                query = query.filter(Vehicle.license_plate.ilike(f'%{search}%'))
+                
+            if vehicle_type != 'all':
+                query = query.filter(Vehicle.vehicle_category == vehicle_type)
+            elif payment_type == 'visitor':
+                # If they explicitly want visitor payments, filter out Tenant category to be clean
+                query = query.filter(Vehicle.vehicle_category != 'Tenant')
+                
+            vehicles = query.all()
+            
+            for v in vehicles:
+                duration_str = "-"
+                if v.entry_time:
+                    end_time = v.exit_time or datetime.utcnow()
+                    diff = end_time - v.entry_time
+                    hours = int(diff.total_seconds() // 3600)
+                    minutes = int((diff.total_seconds() % 3600) // 60)
+                    duration_str = f"{hours}h {minutes}m"
+                    
+                result.append({
+                    'id': f"vehicle_{v.id}",
+                    'vehicleNumber': v.license_plate,
+                    'entryTime': v.entry_time.strftime('%Y-%m-%d %H:%M:%S') if v.entry_time else None,
+                    'exitTime': v.exit_time.strftime('%Y-%m-%d %H:%M:%S') if v.exit_time else None,
+                    'type': v.vehicle_category or 'Visitor',
+                    'status': 'Exited' if v.exit_time else 'Inside',
+                    'duration': duration_str,
+                    'paymentMode': v.payment_mode.capitalize() if v.payment_mode else '-',
+                    'paymentAmount': f"{v.payable_amount:.3f}" if v.payable_amount is not None else "0.000",
+                    'paymentStatus': v.payment_status.capitalize() if v.payment_status else 'Pending',
+                    'collectedBy': v.verifier.username if v.verifier else ('System' if v.payment_status == 'paid' else '-'),
+                    'paymentType': 'visitor'
+                })
+        
+        # 2. Fetch Tenant Subscription Reports (Tenant Payments) if payment_type is 'all' or 'tenant'
+        if payment_type in ('all', 'tenant'):
+            from models import TenantSubscription, Tenant, TenantVehicle
+            sub_query = TenantSubscription.query.join(Tenant)
+            
+            if start_date_str:
+                start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+                sub_query = sub_query.filter(TenantSubscription.payment_date >= start_date)
+                
+            if end_date_str:
+                end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+                sub_query = sub_query.filter(TenantSubscription.payment_date <= end_date)
+                
+            if search:
+                sub_query = sub_query.filter(
+                    (Tenant.tenant_name.ilike(f'%{search}%')) | 
+                    (TenantSubscription.tenant_id.in_(
+                        db.session.query(TenantVehicle.tenant_id).filter(TenantVehicle.license_plate.ilike(f'%{search}%'))
+                    ))
+                )
+                
+            subscriptions = sub_query.all()
+            
+            for s in subscriptions:
+                plates = ", ".join([v.license_plate for v in s.tenant.vehicles])
+                vehicle_name = s.tenant.tenant_name
+                if plates:
+                    vehicle_name = f"{s.tenant.tenant_name} ({plates})"
+                
+                days = (s.end_date - s.start_date).days
+                duration_str = f"{days} days"
+                
+                result.append({
+                    'id': f"sub_{s.id}",
+                    'vehicleNumber': vehicle_name,
+                    'entryTime': s.start_date.strftime('%Y-%m-%d 00:00:00') if s.start_date else None,
+                    'exitTime': s.end_date.strftime('%Y-%m-%d 23:59:59') if s.end_date else None,
+                    'type': 'Tenant',
+                    'status': s.status.capitalize() if s.status else 'Active',
+                    'duration': duration_str,
+                    'paymentMode': s.payment_method or 'Card',
+                    'paymentAmount': f"{s.amount_paid:.3f}" if s.amount_paid is not None else "0.000",
+                    'paymentStatus': s.payment_status.capitalize() if s.payment_status else 'Paid',
+                    'collectedBy': 'System',
+                    'paymentType': 'tenant'
+                })
+                
+        # Sort merged list by entryTime desc
+        result.sort(key=lambda x: x['entryTime'] or '', reverse=True)
+        
         return jsonify(result), 200
     except Exception as e:
         import traceback

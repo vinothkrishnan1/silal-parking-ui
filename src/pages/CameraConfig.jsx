@@ -17,6 +17,7 @@ const CameraConfig = () => {
     device_type: "ENTRY CAMERA",
     device_name: "",
     gate_name: "",
+    gate_type: "Unrestricted",
     ip_address: "",
     mac_address: "",
     port: "",
@@ -198,6 +199,7 @@ const CameraConfig = () => {
       device_type: "ENTRY CAMERA",
       device_name: "",
       gate_name: "",
+      gate_type: "Unrestricted",
       ip_address: "",
       mac_address: "",
       port: "",
@@ -212,6 +214,7 @@ const CameraConfig = () => {
       device_type: mapApiToUiDeviceType(device.device_type),
       device_name: device.device_name || "",
       gate_name: device.gate_name || "",
+      gate_type: device.gate_type || "Unrestricted",
       ip_address: device.ip_address,
       mac_address: device.mac_address,
       port: String(device.port ?? ""),
@@ -229,6 +232,7 @@ const CameraConfig = () => {
       device_type: mapUiToApiDeviceType(formData.device_type),
       device_name: formData.device_name,
       gate_name: formData.gate_name,
+      gate_type: formData.gate_type,
       ip_address: formData.ip_address,
       mac_address: formData.mac_address,
       port: parseInt(formData.port, 10),
@@ -243,6 +247,7 @@ const CameraConfig = () => {
             ...selectedDevice,
             device_name: formData.device_name,
             gate_name: formData.gate_name,
+            gate_type: formData.gate_type,
             ip_address: formData.ip_address,
             mac_address: formData.mac_address,
             port: parseInt(formData.port, 10),
@@ -274,6 +279,7 @@ const CameraConfig = () => {
             device_type: createdDevice.device_type || apiPayload.device_type,
             device_name: createdDevice.device_name || formData.device_name,
             gate_name: createdDevice.gate_name || formData.gate_name,
+            gate_type: createdDevice.gate_type || formData.gate_type,
             ip_address: createdDevice.ip_address || formData.ip_address,
             mac_address: createdDevice.mac_address || formData.mac_address,
             port: createdDevice.port || parseInt(formData.port, 10),
@@ -402,6 +408,7 @@ const CameraConfig = () => {
                     <div className="mt-1 text-sm text-gray-600 font-medium">
                       <p className="mb-2"><span className="font-bold text-gray-700">Type:</span> {device.device_type}</p>
                       <p className="mb-2"><span className="font-bold text-gray-700">Gate:</span> {device.gate_name || "Not set"}</p>
+                      <p className="mb-2"><span className="font-bold text-gray-700">Gate Type:</span> {device.gate_type || "Unrestricted"}</p>
                       <p className="mb-2"><span className="font-bold text-gray-700">IP Address:</span> {device.ip_address}</p>
                       <p className="mb-2"><span className="font-bold text-gray-700">MAC Address:</span> {device.mac_address}</p>
                       <p className="mb-2"><span className="font-bold text-gray-700">Port:</span> {device.port}</p>
@@ -481,6 +488,19 @@ const CameraConfig = () => {
                   disabled={isLoading}
                   placeholder="e.g. Main Entrance"
                 />
+              </div>
+              <div className="mb-5">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Gate Type</label>
+                <select
+                  className="w-full px-4 py-3 bg-gray-50/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-premium-black focus:border-premium-black focus:bg-white transition-all text-sm font-medium text-gray-900 shadow-sm"
+                  value={formData.gate_type}
+                  onChange={(e) => setFormData({ ...formData, gate_type: e.target.value })}
+                  disabled={isLoading}
+                >
+                  <option value="Unrestricted">Unrestricted</option>
+                  <option value="Visitor">Visitor</option>
+                  <option value="Tenant">Tenant</option>
+                </select>
               </div>
               <div className="mb-5">
                 <label className="block text-sm font-semibold text-gray-700 mb-2">IP Address</label>

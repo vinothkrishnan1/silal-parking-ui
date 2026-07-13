@@ -221,6 +221,34 @@ def _open_barrier_with_log(controller_device, context_label, license_plate):
     return result, status_code
 
 
+def classify_vehicle(license_plate):
+    """
+    Classifies a vehicle as 'Staff', 'Tenant', or 'Visitor' based on registration.
+    """
+    if not license_plate:
+        return 'Visitor'
+    
+    staff = WaivedUser.query.filter(WaivedUser.license_plate.ilike(f"%{license_plate}%")).first()
+    if staff:
+        today = datetime.utcnow().date()
+        is_valid = True
+        if staff.valid_from and today < staff.valid_from:
+            is_valid = False
+        if staff.valid_until and today > staff.valid_until:
+            is_valid = False
+            
+        if is_valid:
+            return 'Staff'
+        
+    tenant_vehicle = TenantVehicle.query.filter(
+        func.replace(func.lower(TenantVehicle.license_plate), ' ', '') == license_plate.lower().replace(' ', '')
+    ).first()
+    if tenant_vehicle:
+        return 'Tenant'
+        
+    return 'Visitor'
+
+
 def handle_anpr_entry(vehicle_data):
     """
     Handles ANPR entry data, checks for duplicates, creates a new vehicle entry,
@@ -238,7 +266,60 @@ def handle_anpr_entry(vehicle_data):
 
     log_info(f"ANPR Camera Entry Detect & Process: Plate={license_plate}")
     _log_camera_context("Entry camera context", vehicle_data)
-    log_info(f"Entry camera resolved gate_name={_resolve_gate_name_from_camera_data(vehicle_data)}")
+    
+    resolved_gate_name = _resolve_gate_name_from_camera_data(vehicle_data)
+    log_info(f"Entry camera resolved gate_name={resolved_gate_name}")
+
+    now = datetime.utcnow()
+    today = now.date()
+
+    # --- Gate Restrictions Check ---
+    source_ip = vehicle_data.get("source_ip") or vehicle_data.get("ip_address") or vehicle_data.get("client_ip") or vehicle_data.get("remote_addr")
+    gate_device = None
+    if source_ip:
+        gate_device = DeviceConfig.query.filter(DeviceConfig.ip_address == source_ip).first()
+    if not gate_device and resolved_gate_name:
+        gate_device = DeviceConfig.query.filter(func.lower(DeviceConfig.gate_name) == str(resolved_gate_name).strip().lower()).first()
+
+    gate_type = gate_device.gate_type if gate_device else "Unrestricted"
+    veh_class = classify_vehicle(license_plate)
+    log_info(f"Entry verification: Plate={license_plate}, Vehicle Class={veh_class}, Gate={resolved_gate_name} (Type={gate_type})")
+
+    if gate_type == "Visitor" and veh_class == "Tenant":
+        reason = "Resident cars are not allowed to enter visitor area"
+        log_info(f"Entry BLOCKED: Plate={license_plate}, Gate={resolved_gate_name}, Reason={reason}")
+        
+        website_payload = {
+            "flow_type": "entry",
+            "license_plate": license_plate,
+            "entry_time": now.strftime('%Y-%m-%d %H:%M:%S'),
+            "vehicle_category": veh_class,
+            "tenant_type": veh_class,
+            "requires_payment": False,
+            "requires_print": False,
+            "message": f"Access Denied: {reason}",
+            "access_denied": True
+        }
+        send_data_to_website(website_payload)
+        return
+
+    if gate_type == "Tenant" and veh_class == "Visitor":
+        reason = "Visitor cars are not allowed to enter resident area"
+        log_info(f"Entry BLOCKED: Plate={license_plate}, Gate={resolved_gate_name}, Reason={reason}")
+        
+        website_payload = {
+            "flow_type": "entry",
+            "license_plate": license_plate,
+            "entry_time": now.strftime('%Y-%m-%d %H:%M:%S'),
+            "vehicle_category": veh_class,
+            "tenant_type": veh_class,
+            "requires_payment": False,
+            "requires_print": False,
+            "message": f"Access Denied: {reason}",
+            "access_denied": True
+        }
+        send_data_to_website(website_payload)
+        return
 
     # Block only if the same plate is still active inside.
     existing_vehicle = Vehicle.query.filter(
@@ -251,8 +332,6 @@ def handle_anpr_entry(vehicle_data):
         print(log_message, file=sys.stdout)
         return
 
-    now = datetime.utcnow()
-    today = now.date()
     sync_expired_subscriptions(today)
 
     # --- Vehicle Classification Logic (Priority: Tenant > Staff > Visitor) ---
@@ -291,8 +370,15 @@ def handle_anpr_entry(vehicle_data):
     if not tenant_vehicle:
         staff = WaivedUser.query.filter(WaivedUser.license_plate.ilike(f"%{license_plate}%")).first()
         if staff:
-            category = 'Staff'
-            is_subscriber = True
+            is_valid = True
+            if staff.valid_from and today < staff.valid_from:
+                is_valid = False
+            if staff.valid_until and today > staff.valid_until:
+                is_valid = False
+                
+            if is_valid:
+                category = 'Staff'
+                is_subscriber = True
 
     # Always create a fresh history row once the prior visit has exited.
     new_vehicle = Vehicle(
@@ -420,7 +506,49 @@ def handle_anpr_exit(vehicle_data):
             )
             return jsonify({"status": "error", "message": "No active vehicle found inside"}), 404
 
+        resolved_gate_name = _resolve_gate_name_from_camera_data(vehicle_data)
         now = datetime.utcnow()
+
+        # --- Gate Restrictions Check ---
+        source_ip = vehicle_data.get("source_ip") or vehicle_data.get("ip_address") or vehicle_data.get("client_ip") or vehicle_data.get("remote_addr")
+        gate_device = None
+        if source_ip:
+            gate_device = DeviceConfig.query.filter(DeviceConfig.ip_address == source_ip).first()
+        if not gate_device and resolved_gate_name:
+            gate_device = DeviceConfig.query.filter(func.lower(DeviceConfig.gate_name) == str(resolved_gate_name).strip().lower()).first()
+
+        gate_type = gate_device.gate_type if gate_device else "Unrestricted"
+        veh_class = classify_vehicle(license_plate)
+        log_info(f"Exit verification: Plate={license_plate}, Vehicle Class={veh_class}, Gate={resolved_gate_name} (Type={gate_type})")
+
+        if gate_type == "Visitor" and veh_class == "Tenant":
+            reason = "Resident cars are not allowed to exit through visitor area"
+            log_info(f"Exit BLOCKED: Plate={license_plate}, Gate={resolved_gate_name}, Reason={reason}")
+            
+            return jsonify({"status": "error", "message": f"Access Denied: {reason}"}), 403
+
+        if gate_type == "Tenant" and veh_class == "Visitor":
+            reason = "Visitor cars are not allowed to exit through resident area"
+            log_info(f"Exit BLOCKED: Plate={license_plate}, Gate={resolved_gate_name}, Reason={reason}")
+            
+            kiosk_payload = {
+                "flow_type": "exit",
+                "license_plate": license_plate,
+                "entry_time": vehicle.entry_time.isoformat() if vehicle.entry_time else None,
+                "exit_time": now.isoformat(),
+                "duration": round((now - vehicle.entry_time).total_seconds() / 60, 2) if vehicle.entry_time else 0,
+                "payable_amount": 0,
+                "payment_status": "unpaid",
+                "vehicle_category": veh_class,
+                "tenant_type": veh_class,
+                "gate_name": resolved_gate_name,
+                "requires_payment": False,
+                "message": f"Access Denied: {reason}",
+                "access_denied": True
+            }
+            send_data_to_website(kiosk_payload)
+            return jsonify({"status": "error", "message": f"Access Denied: {reason}"}), 403
+
         duration = (now - vehicle.entry_time).total_seconds() / 60  # in minutes
         payable_amount = calculate_payment(duration)
 

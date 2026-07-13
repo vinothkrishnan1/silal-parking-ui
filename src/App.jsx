@@ -16,6 +16,7 @@ import LoginPage from './pages/LoginPage';
 import User1LoginPage from './pages/User1LoginPage';
 import AddUser from './pages/AddUser';
 import KioskManagement from './pages/KioskManagement';
+import LedDisplayManagement from './pages/LedDisplayManagement';
 import BoomBarrierControl from './pages/BoomBarrierControl';
 import TenantVehicles from './pages/TenantVehicles';
 import TenantSubscriptionHistory from './pages/TenantSubscriptionHistory';
@@ -381,6 +382,7 @@ function App() {
           <Route path="/payment-report" element={<PaymentReport />} />
           <Route path="/add-user" element={<AddUser />} />
           <Route path="/kiosk-management" element={<KioskManagement />} />
+          <Route path="/led-display-management" element={<LedDisplayManagement />} />
           <Route path="/boom-barrier-control" element={<BoomBarrierControl />} />
           <Route path="/tenant-vehicles" element={<TenantVehicles />} />
           <Route path="/tenant-subscription-history" element={<TenantSubscriptionHistory />} />

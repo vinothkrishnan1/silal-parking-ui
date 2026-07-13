@@ -163,18 +163,29 @@ const Dashboard = () => {
             <div className="h-1.5 w-12 bg-gradient-gold rounded-full"></div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 relative z-10">
-            <div className="bg-gray-50/50 border border-gray-100 p-5 rounded-xl hover:shadow-md transition-all duration-300 group hover:bg-white hover:border-premium-gold/20">
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1 group-hover:text-premium-gold transition-colors">{t('dashboard.revenueToday')}</p>
-              <p className="text-3xl font-black text-gradient-gold drop-shadow-sm">{t('dashboard.omr')} {dashboardData?.revenueToday?.toFixed(3) || "0.000"}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 relative z-10">
+            <div className="bg-gray-50/50 border border-gray-100 p-3 xl:p-4 rounded-xl hover:shadow-md transition-all duration-300 group hover:bg-white hover:border-premium-gold/20">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 group-hover:text-premium-gold transition-colors">{t('dashboard.visitorRevenue')}</p>
+              <p className="text-base sm:text-lg xl:text-2xl font-black text-gradient-gold drop-shadow-sm whitespace-nowrap">
+                <span className="text-[10px] xl:text-xs font-bold mr-1">OMR</span>
+                {dashboardData?.visitorRevenueToday?.toFixed(3) || "0.000"}
+              </p>
             </div>
 
-            <div className="bg-gray-50/50 border border-gray-100 p-5 rounded-xl hover:shadow-md transition-all duration-300 group hover:bg-white">
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1 group-hover:text-gray-600 transition-colors">{t('dashboard.activeTime')}</p>
-              <p className="text-3xl font-black text-gray-900 tracking-tight">{dashboardData?.mostActiveTime || "N/A"}</p>
+            <div className="bg-gray-50/50 border border-gray-100 p-3 xl:p-4 rounded-xl hover:shadow-md transition-all duration-300 group hover:bg-white hover:border-premium-gold/20">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 group-hover:text-premium-gold transition-colors">{t('dashboard.tenantRevenue')}</p>
+              <p className="text-base sm:text-lg xl:text-2xl font-black text-gradient-gold drop-shadow-sm whitespace-nowrap">
+                <span className="text-[10px] xl:text-xs font-bold mr-1">OMR</span>
+                {dashboardData?.tenantRevenueToday?.toFixed(3) || "0.000"}
+              </p>
             </div>
 
-            <div className="bg-gray-50/50 border border-gray-100 p-5 rounded-xl col-span-1 md:col-span-2 hover:shadow-md transition-all duration-300 hover:bg-white">
+            <div className="bg-gray-50/50 border border-gray-100 p-3 xl:p-4 rounded-xl hover:shadow-md transition-all duration-300 group hover:bg-white hover:border-premium-gold/20">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 group-hover:text-gray-600 transition-colors">{t('dashboard.activeTime')}</p>
+              <p className="text-[12px] sm:text-sm xl:text-lg font-black text-gray-900 tracking-tight whitespace-nowrap mt-1">{dashboardData?.mostActiveTime || "N/A"}</p>
+            </div>
+
+            <div className="bg-gray-50/50 border border-gray-100 p-5 rounded-xl col-span-1 md:col-span-3 hover:shadow-md transition-all duration-300 hover:bg-white">
               <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-5">{t('dashboard.currentOccupancy')}</p>
               <div className="space-y-5">
                 <div className="flex items-center justify-between group">
@@ -213,7 +224,7 @@ const Dashboard = () => {
               </div>
             </div>
 
-            <div className="bg-gray-50/50 border border-gray-100 p-5 rounded-xl col-span-1 md:col-span-2 hover:shadow-md transition-all duration-300 hover:bg-white">
+            <div className="bg-gray-50/50 border border-gray-100 p-5 rounded-xl col-span-1 md:col-span-3 hover:shadow-md transition-all duration-300 hover:bg-white">
               <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">{t('dashboard.recentActivity')}</p>
               <div className="text-sm space-y-3 max-h-36 overflow-y-auto pr-2 scrollbar-premium" style={{ scrollbarWidth: 'thin' }}>
                 {dashboardData?.recentActivity?.length > 0 ? (

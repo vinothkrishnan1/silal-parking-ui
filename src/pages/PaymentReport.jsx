@@ -56,6 +56,7 @@ const PaymentReport = () => {
   const [paymentStatusFilter, setPaymentStatusFilter] = useState('all');
   const [paymentModeFilter, setPaymentModeFilter] = useState('all');
   const [staffFilter, setStaffFilter] = useState('all');
+  const [paymentTypeFilter, setPaymentTypeFilter] = useState('all'); // visitor, tenant, all
   const [sortField, setSortField] = useState('entryTime');
   const [sortDirection, setSortDirection] = useState('desc');
   const [showFilters, setShowFilters] = useState(false);
@@ -67,7 +68,7 @@ const PaymentReport = () => {
   const fetchPaymentReports = async () => {
     try {
       setLoading(true);
-      let url = apiUrl(`/api/vehicles/reports?search=${encodeURIComponent(searchTerm)}`);
+      let url = apiUrl(`/api/vehicles/reports?search=${encodeURIComponent(searchTerm)}&payment_type=${paymentTypeFilter}`);
       if (dateRange.start) url += `&start_date=${dateRange.start}`;
       if (dateRange.end) url += `&end_date=${dateRange.end}`;
 
@@ -85,7 +86,7 @@ const PaymentReport = () => {
 
   useEffect(() => {
     fetchPaymentReports();
-  }, [searchTerm, dateRange]);
+  }, [searchTerm, dateRange, paymentTypeFilter]);
 
   // Tick every 60 s so live durations (vehicles still inside) update automatically
   useEffect(() => {
@@ -93,7 +94,7 @@ const PaymentReport = () => {
     return () => clearInterval(timer);
   }, []);
 
-  useEffect(() => { setCurrentPage(1); }, [searchTerm, dateRange, vehicleNumberFilter, paymentStatusFilter, paymentModeFilter, staffFilter, sortField, sortDirection]);
+  useEffect(() => { setCurrentPage(1); }, [searchTerm, dateRange, vehicleNumberFilter, paymentStatusFilter, paymentModeFilter, staffFilter, sortField, sortDirection, paymentTypeFilter]);
 
   const handleSort = (field) => {
     if (sortField === field) setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -239,6 +240,7 @@ const PaymentReport = () => {
               </div>
               {[
                 { label: t('paymentReports.vehicleNumber'), value: vehicleNumberFilter, setter: setVehicleNumberFilter, type: 'text', placeholder: t('paymentReports.enterVehicleNumber') },
+                { label: t('paymentReports.paymentType'), value: paymentTypeFilter, setter: setPaymentTypeFilter, type: 'select', options: ['all', 'visitor', 'tenant'], allLabel: t('paymentReports.allPayments'), customLabel: (opt) => opt === 'visitor' ? t('paymentReports.visitorPayments') : opt === 'tenant' ? t('paymentReports.tenantPayments') : opt },
                 { label: t('paymentReports.paymentStatus'), value: paymentStatusFilter, setter: setPaymentStatusFilter, type: 'select', options: uniquePaymentStatuses, allLabel: t('paymentReports.allStatuses') },
                 { label: t('paymentReports.paymentMode'), value: paymentModeFilter, setter: setPaymentModeFilter, type: 'select', options: uniquePaymentModes, allLabel: t('paymentReports.allPaymentModes') },
                 { label: t('paymentReports.collectedBy'), value: staffFilter, setter: setStaffFilter, type: 'select', options: uniqueStaffMembers, allLabel: t('paymentReports.allStaffMembers') }
@@ -253,9 +255,11 @@ const PaymentReport = () => {
                         <option key={opt} value={opt}>
                           {opt === 'all'
                             ? filter.allLabel
-                            : filter.label === t('paymentReports.paymentStatus')
-                              ? getPaymentStatusLabel(opt)
-                              : opt}
+                            : filter.customLabel
+                              ? filter.customLabel(opt)
+                              : filter.label === t('paymentReports.paymentStatus')
+                                ? getPaymentStatusLabel(opt)
+                                : opt}
                         </option>
                       ))}
                     </select>
@@ -263,7 +267,7 @@ const PaymentReport = () => {
                 </div>
               ))}
               <div className="flex items-end">
-                <button className="ripple-button w-full px-4 py-3 bg-gray-900 text-white font-bold text-sm rounded-xl hover:bg-black flex items-center justify-center transition-all shadow-md active:scale-95 focus:outline-none" onClick={() => { setDateRange({ start: '', end: '' }); setSearchTerm(''); setVehicleNumberFilter(''); setPaymentStatusFilter('all'); setPaymentModeFilter('all'); setStaffFilter('all'); }}>{t('reports.reset')}</button>
+                <button className="ripple-button w-full px-4 py-3 bg-gray-900 text-white font-bold text-sm rounded-xl hover:bg-black flex items-center justify-center transition-all shadow-md active:scale-95 focus:outline-none" onClick={() => { setDateRange({ start: '', end: '' }); setSearchTerm(''); setVehicleNumberFilter(''); setPaymentStatusFilter('all'); setPaymentModeFilter('all'); setStaffFilter('all'); setPaymentTypeFilter('all'); }}>{t('reports.reset')}</button>
               </div>
             </div>
           </div>

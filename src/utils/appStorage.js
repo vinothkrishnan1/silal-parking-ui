@@ -6,8 +6,10 @@ export const APP_USERS_EVENT = "app-users-changed";
 export const APP_CAMERAS_KEY = "appCameras";
 export const APP_CAMERAS_EVENT = "app-cameras-changed";
 export const APP_KIOSK_VIDEOS_EVENT = "app-kiosk-videos-changed";
+export const APP_LED_VIDEOS_EVENT = "app-led-videos-changed";
 
 const APP_KIOSK_VIDEO_SYNC_KEY = "appKioskVideosVersion";
+const APP_LED_VIDEO_SYNC_KEY = "appLedVideosVersion";
 
 const emitKioskVideosChanged = () => {
   const version = Date.now().toString();
@@ -109,4 +111,86 @@ export const deleteStoredKioskVideo = async (id) => {
   }
 
   emitKioskVideosChanged();
+};
+
+const emitLedVideosChanged = () => {
+  const version = Date.now().toString();
+
+  try {
+    localStorage.setItem(APP_LED_VIDEO_SYNC_KEY, version);
+  } catch (error) {
+    console.warn("Failed to sync led video version:", error);
+  }
+
+  window.dispatchEvent(
+    new CustomEvent(APP_LED_VIDEOS_EVENT, {
+      detail: { version },
+    })
+  );
+};
+
+export const getStoredLedVideos = async () => {
+  const response = await fetch(apiUrl("/api/led-videos"));
+  if (!response.ok) {
+    throw new Error("Failed to read led videos.");
+  }
+
+  const videos = await response.json();
+  return Array.isArray(videos)
+    ? videos.sort((left, right) => new Date(left.uploadedAt) - new Date(right.uploadedAt))
+    : [];
+};
+
+export const addStoredLedVideos = async (entries = []) => {
+  if (!entries.length) return [];
+
+  const formData = new FormData();
+  const titles = [];
+
+  entries.forEach((entry, index) => {
+    const file = entry.file || entry.fileBlob;
+    if (file) {
+      formData.append("videos", file, file.name || entry.fileName || `video-${index + 1}.mp4`);
+      titles.push(entry.title || file.name || `Video ${index + 1}`);
+    }
+  });
+
+  formData.append("titles", JSON.stringify(titles));
+
+  const response = await fetch(apiUrl("/api/led-videos"), {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    let message = "Failed to upload led videos.";
+
+    try {
+      const payload = await response.json();
+      message = payload.message || message;
+    } catch {
+      // Keep the fallback message if the response is not JSON.
+    }
+
+    throw new Error(message);
+  }
+
+  const savedEntries = await response.json();
+
+  emitLedVideosChanged();
+  return Array.isArray(savedEntries) ? savedEntries : [];
+};
+
+export const deleteStoredLedVideo = async (id) => {
+  if (!id) return;
+
+  const response = await fetch(apiUrl(`/api/led-videos/${id}`), {
+    method: "DELETE",
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to delete led video.");
+  }
+
+  emitLedVideosChanged();
 };

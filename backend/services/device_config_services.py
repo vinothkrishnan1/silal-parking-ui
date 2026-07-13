@@ -37,6 +37,7 @@ def add_device(data):
         device_type = data.get("device_type")
         device_name = (data.get("device_name") or "").strip() or None
         gate_name = (data.get("gate_name") or "").strip() or None
+        gate_type = (data.get("gate_type") or "").strip() or "Unrestricted"
         ip_address = data.get("ip_address")
         mac_address = data.get("mac_address")
         port = data.get("port")
@@ -58,6 +59,7 @@ def add_device(data):
             device_type=device_type,
             device_name=device_name,
             gate_name=gate_name,
+            gate_type=gate_type,
             ip_address=ip_address,
             mac_address=mac_address,
             port=int(port),
@@ -85,6 +87,7 @@ def edit_device(data, device_id):
         device_type = data.get("device_type")
         device_name = (data.get("device_name") or "").strip() or None
         gate_name = (data.get("gate_name") or "").strip() or None
+        gate_type = (data.get("gate_type") or "").strip() or "Unrestricted"
         ip_address = data.get("ip_address")
         mac_address = data.get("mac_address")
         port = data.get("port")
@@ -105,6 +108,7 @@ def edit_device(data, device_id):
         device.device_type = device_type
         device.device_name = device_name
         device.gate_name = gate_name
+        device.gate_type = gate_type
         device.ip_address = ip_address
         device.mac_address = mac_address
         device.port = int(port)

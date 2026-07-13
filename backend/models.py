@@ -322,6 +322,7 @@ class DeviceConfig(db.Model):
     device_type = db.Column(db.Enum('ENTRY CAMERA', 'EXIT CAMERA', 'CONTROLLER', name='devices_enum'), nullable=False)
     device_name = db.Column(db.String(100), nullable=True)
     gate_name = db.Column(db.String(100), nullable=True)
+    gate_type = db.Column(db.String(50), nullable=True, default='Unrestricted')
     ip_address = db.Column(db.String(100), nullable=False)
     mac_address = db.Column(db.String(100), nullable=False)
     port = db.Column(db.Integer, nullable=False)
@@ -333,6 +334,7 @@ class DeviceConfig(db.Model):
             'device_type': self.device_type,
             'device_name': self.device_name,
             'gate_name': self.gate_name,
+            'gate_type': self.gate_type,
             'ip_address': self.ip_address,
             'mac_address': self.mac_address,
             'port': self.port,

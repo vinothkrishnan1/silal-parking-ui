@@ -26,6 +26,7 @@ import {
   APP_KIOSK_VIDEOS_EVENT,
   getStoredKioskVideos,
 } from "../utils/appStorage";
+import TizenVideoPlayer from "../components/TizenVideoPlayer";
 
 const KIOSK_API_URL = apiUrl("/receive_data");
 const PAYMENT_API_URL = apiUrl("/payment_status");
@@ -123,19 +124,19 @@ const normalizeKioskPayload = (responseJson) => {
     payload.flow_type ||
     payload.flowType ||
     (payload.exit_time ||
-    payload.exitTime ||
-    payload.payable_amount !== undefined ||
-    payload.payableAmount !== undefined ||
-    payload.requires_payment !== undefined ||
-    payload.requiresPayment !== undefined
+      payload.exitTime ||
+      payload.payable_amount !== undefined ||
+      payload.payableAmount !== undefined ||
+      payload.requires_payment !== undefined ||
+      payload.requiresPayment !== undefined
       ? "exit"
       : "entry");
 
   const vehicleCategory = normalizeCategory(
     payload.vehicle_category ||
-      payload.vehicleCategory ||
-      payload.tenant_type ||
-      payload.tenantType
+    payload.vehicleCategory ||
+    payload.tenant_type ||
+    payload.tenantType
   );
 
   return {
@@ -148,14 +149,14 @@ const normalizeKioskPayload = (responseJson) => {
       payload.duration !== undefined && payload.duration !== null
         ? Number(payload.duration)
         : payload.durationMinutes !== undefined && payload.durationMinutes !== null
-        ? Number(payload.durationMinutes)
-        : null,
+          ? Number(payload.durationMinutes)
+          : null,
     payableAmount:
       payload.payable_amount !== undefined && payload.payable_amount !== null
         ? Number(payload.payable_amount)
         : payload.payableAmount !== undefined && payload.payableAmount !== null
-        ? Number(payload.payableAmount)
-        : 0,
+          ? Number(payload.payableAmount)
+          : 0,
     requiresPayment: toBoolean(
       payload.requires_payment !== undefined
         ? payload.requires_payment
@@ -165,13 +166,18 @@ const normalizeKioskPayload = (responseJson) => {
       payload.requires_print !== undefined
         ? toBoolean(payload.requires_print)
         : payload.requiresPrint !== undefined
-        ? toBoolean(payload.requiresPrint)
-        : flowType === "entry" && vehicleCategory === "Visitor",
+          ? toBoolean(payload.requiresPrint)
+          : flowType === "entry" && vehicleCategory === "Visitor",
     barcodeImage: payload.barcode_image || payload.barcodeImage || null,
     printableSlip: payload.printable_slip || payload.printableSlip || null,
     message:
       payload.message ||
       (responseJson && typeof responseJson === "object" ? responseJson.message || "" : ""),
+    accessDenied: toBoolean(
+      payload.access_denied !== undefined
+        ? payload.access_denied
+        : payload.accessDenied
+    ),
   };
 };
 
@@ -195,6 +201,11 @@ const kioskAccentStyles = {
     glow: "bg-amber-200/60",
     iconWrap: "bg-amber-50 text-amber-600 border-amber-100",
     pill: "bg-amber-50 text-amber-700 border-amber-100",
+  },
+  red: {
+    glow: "bg-red-200/50",
+    iconWrap: "bg-red-50 text-red-600 border-red-100",
+    pill: "bg-red-50 text-red-700 border-red-100",
   },
 };
 
@@ -732,7 +743,8 @@ const PrintPassScreen = ({ session, onHome }) => {
 
 const SuccessScreen = ({ session, onHome }) => {
   const isExit = session.flowType === "exit";
-  const title = isExit ? "Exit Approved" : "Access Granted";
+  const isDenied = session.accessDenied;
+  const title = isDenied ? "Access Denied" : (isExit ? "Exit Approved" : "Access Granted");
   const subtitle =
     session.message ||
     (isExit
@@ -743,19 +755,23 @@ const SuccessScreen = ({ session, onHome }) => {
     <KioskPanel
       title={title}
       subtitle={subtitle}
-      icon={CheckCircle}
-      accent="green"
+      icon={isDenied ? X : CheckCircle}
+      accent={isDenied ? "red" : "green"}
       width="max-w-lg"
-      pillText={isExit ? "Exit Approved" : "Entry Approved"}
+      pillText={isDenied ? "Access Denied" : (isExit ? "Exit Approved" : "Entry Approved")}
     >
       <div className="text-center">
-        <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-[2rem] bg-emerald-50 text-emerald-600 shadow-sm">
-          <CheckCircle className="h-12 w-12" />
+        <div className={`mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-[2rem] shadow-sm ${
+          isDenied ? "bg-red-50 text-red-600" : "bg-emerald-50 text-emerald-600"
+        }`}>
+          {isDenied ? <X className="h-12 w-12" /> : <CheckCircle className="h-12 w-12" />}
         </div>
         <div className="mb-2 text-4xl font-black uppercase tracking-[0.2em] text-gray-900">
           {session.plateNumber}
         </div>
-        <div className="mb-6 inline-flex rounded-full border border-blue-100 bg-blue-50 px-4 py-1 text-xs font-bold uppercase tracking-[0.16em] text-primary-blue">
+        <div className={`mb-6 inline-flex rounded-full border px-4 py-1 text-xs font-bold uppercase tracking-[0.16em] ${
+          isDenied ? "border-red-100 bg-red-50 text-red-600" : "border-blue-100 bg-blue-50 text-primary-blue"
+        }`}>
           {session.vehicleCategory}
         </div>
 
@@ -775,12 +791,12 @@ const VideoScreen = ({ onVehicleDetected, playlist = [] }) => {
   const backgroundVideos = playlist.length
     ? playlist
     : [
-        {
-          id: "default-kiosk-background",
-          title: "Default Kiosk Background",
-          sourceUrl: DEFAULT_KIOSK_BACKGROUND_VIDEO,
-        },
-      ];
+      {
+        id: "default-kiosk-background",
+        title: "Default Kiosk Background",
+        sourceUrl: DEFAULT_KIOSK_BACKGROUND_VIDEO,
+      },
+    ];
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
   const playlistSignature = backgroundVideos.map((video) => video.id).join("|");
   const activeBackgroundVideo =
@@ -856,13 +872,12 @@ const VideoScreen = ({ onVehicleDetected, playlist = [] }) => {
 
   return (
     <div className="fixed inset-0 bg-black">
-      <video
-        key={activeBackgroundVideo.id}
-        className="absolute inset-0 h-full w-full object-cover"
-        autoPlay
-        muted
-        playsInline
+      <TizenVideoPlayer
+        src={activeBackgroundVideo.sourceUrl}
+        fileType={activeBackgroundVideo.fileType}
         loop={backgroundVideos.length === 1}
+        poster={activeBackgroundVideo.posterUrl}
+        className="absolute inset-0 h-full w-full object-cover"
         onEnded={() => {
           if (backgroundVideos.length > 1) {
             setCurrentVideoIndex(
@@ -870,12 +885,7 @@ const VideoScreen = ({ onVehicleDetected, playlist = [] }) => {
             );
           }
         }}
-      >
-        <source
-          src={activeBackgroundVideo.sourceUrl}
-          type={activeBackgroundVideo.fileType || "video/mp4"}
-        />
-      </video>
+      />
 
       <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-black/45 to-black/65" />
 
@@ -1153,10 +1163,19 @@ const HospitalKioskApp = () => {
         playlist={backgroundVideos}
         onVehicleDetected={(nextSession) => {
           setSession(nextSession);
-          setScreen("main");
+          if (nextSession.accessDenied) {
+            setScreen("success");
+          } else if (nextSession.flowType === "exit" && nextSession.requiresPayment) {
+            setScreen("payment");
+          } else if (nextSession.flowType === "entry" && nextSession.requiresPrint) {
+            setScreen("confirmation");
+          } else {
+            setScreen("success");
+          }
           setLastActivity(Date.now());
         }}
       />
+
     );
   }
 

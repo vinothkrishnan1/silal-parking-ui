@@ -29,6 +29,8 @@ def ensure_device_config_schema():
         schema_updates.append("ALTER TABLE device_config ADD COLUMN device_name VARCHAR(100) NULL")
     if "gate_name" not in existing_columns:
         schema_updates.append("ALTER TABLE device_config ADD COLUMN gate_name VARCHAR(100) NULL")
+    if "gate_type" not in existing_columns:
+        schema_updates.append("ALTER TABLE device_config ADD COLUMN gate_type VARCHAR(50) NULL DEFAULT 'Unrestricted'")
 
     if not schema_updates:
         return

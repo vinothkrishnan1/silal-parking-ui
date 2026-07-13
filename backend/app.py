@@ -10,6 +10,7 @@ from pathlib import Path
 from services.create_admin import create_initial_admin
 from services.camera_listener import register_camera_routes, start_camera_listeners
 from routes.kiosk_routes import register_kiosk_routes
+from routes.led_routes import register_led_routes
 from routes.on_exit_routes import register_on_exit_routes
 from services.on_exit_services import update_payment_status, exit_ping_on_exit, get_last_exit_gate_name
 from services.door_controller import DoorController
@@ -63,6 +64,7 @@ def create_app():
     register_subscription_status_lifespan(app)
     register_camera_routes(app)
     register_kiosk_routes(app)
+    register_led_routes(app)
     start_camera_listeners(app)
     register_on_exit_routes(app)
 
@@ -174,9 +176,17 @@ def create_app():
         def serve_frontend(path):
             if path.startswith(("api/", "auth/", "socket.io", "open-boom-barrier")):
                 return {"message": "Resource not found"}, 404
+            if path.startswith("assets/"):
+                if not (frontend_dist / path).is_file():
+                    return {"message": "Asset not found"}, 404
             if path and (frontend_dist / path).is_file():
                 return send_from_directory(frontend_dist, path)
-            return send_from_directory(frontend_dist, 'index.html')
+            
+            response = send_from_directory(frontend_dist, 'index.html')
+            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '0'
+            return response
 
     @app.errorhandler(404)
     def not_found_error(error):
