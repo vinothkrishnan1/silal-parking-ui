@@ -209,6 +209,7 @@
                     "sampleReceipt":  "Sample Payment Receipt",
                     "print":  "Print",
                     "visitorParking":  "Visitor Parking",
+                    "visitorSubscription": "Visitor Subscription",
                     "tenantSubscription":  "Tenant Subscription",
                     "fourWheeler":  "4-Wheeler",
                     "twoWheeler":  "2-Wheeler"

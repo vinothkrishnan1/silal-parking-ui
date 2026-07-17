@@ -1,4 +1,4 @@
-﻿{
+{
     "dashboard":  {
                       "title":  "لوحة التحكم",
                       "overview":  "نظرة عامة على برو باركينج",
@@ -209,6 +209,7 @@
                     "sampleReceipt":  "نموذج إيصال الدفع",
                     "print":  "طباعة",
                     "visitorParking":  "مواقف الزوار",
+                    "visitorSubscription": "اشتراك الزوار",
                     "tenantSubscription":  "اشتراك المستأجرين",
                     "fourWheeler":  "مركبة صالون/دفع رباعي",
                     "twoWheeler":  "دراجة نارية"

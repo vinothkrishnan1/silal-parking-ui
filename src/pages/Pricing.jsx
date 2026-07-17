@@ -355,6 +355,7 @@ const Pricing = () => {
                   required
                 >
                   <option value="Visitor Parking">{t('pricing.visitorParking')}</option>
+                  <option value="Visitor Subscription">{t('pricing.visitorSubscription')}</option>
                   {enableTenantSubscription && (
                     <option value="Tenant Subscription">{t('pricing.tenantSubscription')}</option>
                   )}
@@ -382,7 +383,7 @@ const Pricing = () => {
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   required
-                  placeholder={formData.pricing_type === 'Tenant Subscription' ? (language === 'ar' ? "مثلاً خطة شهرية" : "e.g. Monthly Plan") : (language === 'ar' ? "مثلاً مواقف الزوار القياسية" : "e.g. Standard Visitor Parking")}
+                  placeholder={(formData.pricing_type === 'Tenant Subscription' || formData.pricing_type === 'Visitor Subscription') ? (language === 'ar' ? "مثلاً خطة شهرية" : "e.g. Monthly Plan") : (language === 'ar' ? "مثلاً مواقف الزوار القياسية" : "e.g. Standard Visitor Parking")}
                 />
               </div>
 
@@ -398,7 +399,7 @@ const Pricing = () => {
                 </select>
               </div>
 
-              {formData.pricing_type === 'Tenant Subscription' && (
+              {(formData.pricing_type === 'Tenant Subscription' || formData.pricing_type === 'Visitor Subscription') && (
                 <>
                   <div>
                     <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">{t('pricing.planPrice')}</label>
@@ -584,7 +585,7 @@ const Pricing = () => {
                   <React.Fragment key={item.id}>
                     <tr className={`hover:bg-gray-50/50 transition-colors ${expandedId === item.id ? 'bg-gray-50/80' : ''} ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
                       <td className={`px-6 py-5 whitespace-nowrap text-sm font-bold text-gray-500 ${language === 'ar' ? 'text-right' : ''}`}>
-                        {item.pricing_type === 'Visitor Parking' ? t('pricing.visitorParking') : t('pricing.tenantSubscription')}
+                        {item.pricing_type === 'Visitor Parking' ? t('pricing.visitorParking') : item.pricing_type === 'Visitor Subscription' ? t('pricing.visitorSubscription') : t('pricing.tenantSubscription')}
                       </td>
                       <td className={`px-6 py-5 whitespace-nowrap ${language === 'ar' ? 'text-right' : ''}`}>
                         <div className="font-black text-gray-900 tracking-tight">{item.vehicle_type === '4-Wheeler' ? t('pricing.fourWheeler') : t('pricing.twoWheeler')}</div>
@@ -594,7 +595,7 @@ const Pricing = () => {
                       </td>
                       <td className={`px-6 py-5 whitespace-nowrap ${language === 'ar' ? 'text-right' : ''}`}>
                         <div className="font-black text-gradient-gold drop-shadow-sm">
-                          {item.pricing_type === 'Tenant Subscription' ? (
+                          {(item.pricing_type === 'Tenant Subscription' || item.pricing_type === 'Visitor Subscription') ? (
                             <span>{parseFloat(item.price).toFixed(3)} {t('dashboard.omr')} / {t('pricing.plan')}</span>
                           ) : (
                             <>
@@ -645,7 +646,7 @@ const Pricing = () => {
                             <div className={`text-sm text-gray-600 mb-4 ${language === 'ar' ? 'text-right' : ''}`}>
                               <span className="font-semibold text-gray-900">{t('pricing.description')}:</span> {item.description || '-'}
                             </div>
-                            {item.pricing_type === 'Tenant Subscription' ? (
+                            {(item.pricing_type === 'Tenant Subscription' || item.pricing_type === 'Visitor Subscription') ? (
                               <div className={`text-sm text-gray-700 ${language === 'ar' ? 'text-right' : ''}`}>
                                 <span className="font-semibold">{t('pricing.validity')}:</span> {item.start_date} {language === 'ar' ? 'إلى' : 'to'} {item.end_date}
                               </div>
