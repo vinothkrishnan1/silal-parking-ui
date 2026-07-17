@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { Edit, AlertTriangle, Check, X, Users, Car } from 'lucide-react';
 import { apiUrl } from '../utils/api';
 import { sanitizeDigits } from '../utils/inputValidation';
@@ -6,6 +7,8 @@ import { useLanguage } from '../context/LanguageContext';
 
 const SlotManagement = () => {
   const { t, language } = useLanguage();
+  const { features } = useOutletContext() || {};
+  const enableTenantSubscription = features?.enable_tenant_subscription !== false;
   const [slotData, setSlotData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -211,7 +214,7 @@ const SlotManagement = () => {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className={`grid grid-cols-1 ${enableTenantSubscription ? 'lg:grid-cols-2' : 'lg:grid-cols-1'} gap-8`}>
         <SlotCard
           title={t('slotManagement.visitorStaffZone')}
           subtitle={t('slotManagement.visitorStaffSubtitle')}
@@ -219,13 +222,15 @@ const SlotManagement = () => {
           icon={<Users size={22} />}
           themeAccent="dark"
         />
-        <SlotCard
-          title={t('slotManagement.tenantZone')}
-          subtitle={t('slotManagement.tenantSubtitle')}
-          data={slotData.tenant}
-          icon={<Car size={22} />}
-          themeAccent="gold"
-        />
+        {enableTenantSubscription && (
+          <SlotCard
+            title={t('slotManagement.tenantZone')}
+            subtitle={t('slotManagement.tenantSubtitle')}
+            data={slotData.tenant}
+            icon={<Car size={22} />}
+            themeAccent="gold"
+          />
+        )}
       </div>
 
       {showModal && (
@@ -247,7 +252,7 @@ const SlotManagement = () => {
             </div>
 
             <form onSubmit={handleSubmit} className="p-8 bg-white">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+              <div className={`grid grid-cols-1 md:grid-cols-${enableTenantSubscription ? '2' : '1'} gap-10`}>
                 {/* Visitor & Staff Section */}
                 <div className="space-y-6">
                   <div className={`flex items-center text-[#121212] text-sm font-black tracking-widest uppercase pb-3 border-b border-gray-100 ${language === 'ar' ? 'justify-end' : ''}`}>
@@ -278,33 +283,35 @@ const SlotManagement = () => {
                 </div>
 
                 {/* Tenant Section */}
-                <div className="space-y-6">
-                  <div className={`flex items-center text-[#c6a87c] text-sm font-black tracking-widest uppercase pb-3 border-b border-gray-100 ${language === 'ar' ? 'justify-end' : ''}`}>
-                    {t('slotManagement.tenant')}
+                {enableTenantSubscription && (
+                  <div className="space-y-6">
+                    <div className={`flex items-center text-[#c6a87c] text-sm font-black tracking-widest uppercase pb-3 border-b border-gray-100 ${language === 'ar' ? 'justify-end' : ''}`}>
+                      {t('slotManagement.tenant')}
+                    </div>
+                    <div className={language === 'ar' ? 'text-right' : 'text-left'}>
+                      <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">{t('slotManagement.totalCapacity')}</label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        className="w-full px-4 py-3.5 bg-gray-50/50 border border-gray-100 rounded-xl focus:border-premium-gold focus:ring-2 focus:ring-premium-gold/30 focus:bg-white outline-none font-black text-lg transition-all text-gray-900 shadow-sm"
+                        value={formData.total_tenant_slots}
+                        onChange={(e) => handleIntegerFieldChange('total_tenant_slots', e.target.value)}
+                      />
+                    </div>
+                    <div className={language === 'ar' ? 'text-right' : 'text-left'}>
+                      <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">{t('slotManagement.reservedSlots')}</label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        className="w-full px-4 py-3.5 bg-gray-50/50 border border-gray-100 rounded-xl focus:border-premium-gold focus:ring-2 focus:ring-premium-gold/30 focus:bg-white outline-none font-black text-lg transition-all text-gray-900 shadow-sm"
+                        value={formData.tenant_reserved}
+                        onChange={(e) => handleIntegerFieldChange('tenant_reserved', e.target.value)}
+                      />
+                    </div>
                   </div>
-                  <div className={language === 'ar' ? 'text-right' : 'text-left'}>
-                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">{t('slotManagement.totalCapacity')}</label>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      className="w-full px-4 py-3.5 bg-gray-50/50 border border-gray-100 rounded-xl focus:border-premium-gold focus:ring-2 focus:ring-premium-gold/30 focus:bg-white outline-none font-black text-lg transition-all text-gray-900 shadow-sm"
-                      value={formData.total_tenant_slots}
-                      onChange={(e) => handleIntegerFieldChange('total_tenant_slots', e.target.value)}
-                    />
-                  </div>
-                  <div className={language === 'ar' ? 'text-right' : 'text-left'}>
-                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">{t('slotManagement.reservedSlots')}</label>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      className="w-full px-4 py-3.5 bg-gray-50/50 border border-gray-100 rounded-xl focus:border-premium-gold focus:ring-2 focus:ring-premium-gold/30 focus:bg-white outline-none font-black text-lg transition-all text-gray-900 shadow-sm"
-                      value={formData.tenant_reserved}
-                      onChange={(e) => handleIntegerFieldChange('tenant_reserved', e.target.value)}
-                    />
-                  </div>
-                </div>
+                )}
               </div>
 
               <div className={`mt-10 flex gap-4 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
