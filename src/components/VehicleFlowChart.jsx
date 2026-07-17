@@ -25,6 +25,7 @@ const VehicleFlowChart = ({ data }) => {
     legend: {
       data: [t('dashboard.enteredToday'), t('dashboard.exitedToday')],
       icon: 'circle',
+      bottom: 0,
       textStyle: {
         fontWeight: 'bold',
         color: '#6b7280'
@@ -33,7 +34,8 @@ const VehicleFlowChart = ({ data }) => {
     grid: {
       left: '3%',
       right: '4%',
-      bottom: '5%',
+      bottom: '15%',
+      top: '10%',
       containLabel: true
     },
     xAxis: {
