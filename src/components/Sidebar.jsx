@@ -22,10 +22,12 @@ import NotificationModal from './NotificationModal';
 import { useLanguage } from '../context/LanguageContext';
 import LedDashboard from '../pages/LedDashboard';
 
-const Sidebar = ({ onLogout, notifications, onMarkAsRead, onMarkAllAsRead, onClearAll }) => {
+const Sidebar = ({ onLogout, notifications, onMarkAsRead, onMarkAllAsRead, onClearAll, features }) => {
   const navigate = useNavigate();
   const { language, toggleLanguage, t } = useLanguage();
   const [showNotificationModal, setShowNotificationModal] = useState(false);
+
+  const enableTenantSubscription = features?.enable_tenant_subscription !== false;
 
   const navItems = [
     { path: '/', icon: <Home size={20} />, label: t('sidebar.dashboard') },
@@ -35,16 +37,16 @@ const Sidebar = ({ onLogout, notifications, onMarkAsRead, onMarkAllAsRead, onCle
     { path: '/payment-report', icon: <Receipt size={20} />, label: t('sidebar.paymentReports') },
     { path: '/pricing', icon: <DollarSign size={20} />, label: t('sidebar.pricing') },
     { path: '/passes', icon: <CreditCard size={20} />, label: t('sidebar.passes') },
-    { path: '/tenant-vehicles', icon: <Car size={20} />, label: t('sidebar.tenantSubscriptions') },
-    { path: '/tenant-subscription-history', icon: <History size={20} />, label: t('sidebar.tenantHistory') },
-    { path: '/tenant-master', icon: <UserPlus size={20} />, label: t('sidebar.tenantMaster') },
+    enableTenantSubscription && { path: '/tenant-vehicles', icon: <Car size={20} />, label: t('sidebar.tenantSubscriptions') },
+    enableTenantSubscription && { path: '/tenant-subscription-history', icon: <History size={20} />, label: t('sidebar.tenantHistory') },
+    enableTenantSubscription && { path: '/tenant-master', icon: <UserPlus size={20} />, label: t('sidebar.tenantMaster') },
     { path: '/cameras', icon: <Camera size={20} />, label: t('sidebar.deviceConfig') },
     { path: '/kiosk-management', icon: <MonitorPlay size={20} />, label: t('sidebar.kioskManagement') },
     { path: '/led-display-management', icon: <MonitorPlay size={20} />, label: t('sidebar.ledDisplayManagement') },
     { path: '/boom-barrier-control', icon: <ChevronsUpDown size={20} />, label: t('sidebar.boomBarrier') },
     { path: '/add-user', icon: <UserPlus size={20} />, label: t('sidebar.addUser') },
     { path: '/settings', icon: <SettingsIcon size={20} />, label: t('sidebar.settings') }
-  ];
+  ].filter(Boolean);
 
   const handleLogoutClick = () => {
     if (onLogout) {

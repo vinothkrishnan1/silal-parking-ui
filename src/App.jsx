@@ -84,7 +84,7 @@ const readStoredStaffPasses = () => {
   }
 };
 
-const AdminLayout = ({ onLogout, vehiclesData, updateVehiclesData, staffPasses, updateStaffPasses, notifications, onMarkNotificationAsRead, onMarkAllNotificationsAsRead, onClearAllNotifications }) => (
+const AdminLayout = ({ onLogout, vehiclesData, updateVehiclesData, staffPasses, updateStaffPasses, notifications, onMarkNotificationAsRead, onMarkAllNotificationsAsRead, onClearAllNotifications, features }) => (
   <div className="flex h-screen bg-gray-100">
     <Sidebar
       onLogout={onLogout}
@@ -92,10 +92,11 @@ const AdminLayout = ({ onLogout, vehiclesData, updateVehiclesData, staffPasses, 
       onMarkAsRead={onMarkNotificationAsRead}
       onMarkAllAsRead={onMarkAllNotificationsAsRead}
       onClearAll={onClearAllNotifications}
+      features={features}
     />
     <div className="flex-1 flex flex-col overflow-hidden">
       <div className="flex-1 overflow-auto">
-        <Outlet context={{ vehiclesData, updateVehiclesData, staffPasses, updateStaffPasses }} />
+        <Outlet context={{ vehiclesData, updateVehiclesData, staffPasses, updateStaffPasses, features }} />
       </div>
     </div>
   </div>
@@ -125,6 +126,15 @@ function App() {
   const [isUser1Authenticated, setIsUser1Authenticated] = useState(() => localStorage.getItem('isUser1Authenticated') === 'true');
 
   const [notifications, setNotifications] = useState([]);
+
+  const [features, setFeatures] = useState({ enable_tenant_subscription: true });
+
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/api/config/features`)
+      .then(res => res.json())
+      .then(data => setFeatures(data))
+      .catch(err => console.error("Failed to fetch features:", err));
+  }, []);
 
   const [vehiclesData, setVehiclesData] = useState([]);
 
@@ -368,6 +378,7 @@ function App() {
                 onMarkNotificationAsRead={markNotificationAsRead}
                 onMarkAllNotificationsAsRead={markAllNotificationsAsRead}
                 onClearAllNotifications={clearAllNotifications}
+                features={features}
               />
             </ProtectedRoute>
           }
@@ -384,9 +395,13 @@ function App() {
           <Route path="/kiosk-management" element={<KioskManagement />} />
           <Route path="/led-display-management" element={<LedDisplayManagement />} />
           <Route path="/boom-barrier-control" element={<BoomBarrierControl />} />
-          <Route path="/tenant-vehicles" element={<TenantVehicles />} />
-          <Route path="/tenant-subscription-history" element={<TenantSubscriptionHistory />} />
-          <Route path="/tenant-master" element={<TenantMaster />} />
+          {features.enable_tenant_subscription && (
+            <>
+              <Route path="/tenant-vehicles" element={<TenantVehicles />} />
+              <Route path="/tenant-subscription-history" element={<TenantSubscriptionHistory />} />
+              <Route path="/tenant-master" element={<TenantMaster />} />
+            </>
+          )}
           <Route path="/settings" element={<Settings onLogout={handleAdminLogout} onUser1Login={handleUser1Login} />} />
           <Route path="/user1/live-parking" element={<Navigate to="/" replace />} />
           <Route path="/user1/*" element={<Navigate to="/" replace />} />

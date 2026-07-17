@@ -9,7 +9,7 @@ import { parseBackendDate } from '../utils/dateTime';
 import { useLanguage } from '../context/LanguageContext';
 
 const Dashboard = () => {
-  const { vehiclesData = [] } = useOutletContext();
+  const { vehiclesData = [], features } = useOutletContext();
   const { language, content, t } = useLanguage();
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -96,6 +96,7 @@ const Dashboard = () => {
   const visitorAvailable = dashboardData?.visitor?.available || 0;
   const tenantAvailable = dashboardData?.tenant?.available || 0;
   const typeDist = dashboardData?.typeDistribution || { tenant: 0, staff: 0, visitor: 0 };
+  const enableTenantSubscription = features?.enable_tenant_subscription !== false;
 
   return (
     <div className="p-6 md:p-8 max-w-[1600px] mx-auto">
@@ -110,7 +111,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className={`grid grid-cols-1 md:grid-cols-2 ${enableTenantSubscription ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-6 mb-8`}>
         <div className="transform transition-transform hover:-translate-y-1 duration-300">
           <StatCard
             title={t('dashboard.visitorStaff')}
@@ -120,15 +121,17 @@ const Dashboard = () => {
             isAlert={visitorAvailable < 5}
           />
         </div>
-        <div className="transform transition-transform hover:-translate-y-1 duration-300">
-          <StatCard
-            title={t('dashboard.tenantSlots')}
-            value={tenantAvailable}
-            icon={<Users size={28} className="text-white" />}
-            color="bg-gradient-gold shadow-lg shadow-premium-gold/30"
-            isAlert={tenantAvailable < 5}
-          />
-        </div>
+        {enableTenantSubscription && (
+          <div className="transform transition-transform hover:-translate-y-1 duration-300">
+            <StatCard
+              title={t('dashboard.tenantSlots')}
+              value={tenantAvailable}
+              icon={<Users size={28} className="text-white" />}
+              color="bg-gradient-gold shadow-lg shadow-premium-gold/30"
+              isAlert={tenantAvailable < 5}
+            />
+          </div>
+        )}
         <div className="transform transition-transform hover:-translate-y-1 duration-300">
           <StatCard
             title={t('dashboard.enteredToday')}
@@ -163,7 +166,7 @@ const Dashboard = () => {
             <div className="h-1.5 w-12 bg-gradient-gold rounded-full"></div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 relative z-10">
+          <div className={`grid grid-cols-1 sm:grid-cols-${enableTenantSubscription ? '3' : '2'} gap-3 relative z-10`}>
             <div className="bg-gray-50/50 border border-gray-100 p-3 xl:p-4 rounded-xl hover:shadow-md transition-all duration-300 group hover:bg-white hover:border-premium-gold/20">
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 group-hover:text-premium-gold transition-colors">{t('dashboard.visitorRevenue')}</p>
               <p className="text-base sm:text-lg xl:text-2xl font-black text-gradient-gold drop-shadow-sm whitespace-nowrap">
@@ -172,13 +175,15 @@ const Dashboard = () => {
               </p>
             </div>
 
-            <div className="bg-gray-50/50 border border-gray-100 p-3 xl:p-4 rounded-xl hover:shadow-md transition-all duration-300 group hover:bg-white hover:border-premium-gold/20">
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 group-hover:text-premium-gold transition-colors">{t('dashboard.tenantRevenue')}</p>
-              <p className="text-base sm:text-lg xl:text-2xl font-black text-gradient-gold drop-shadow-sm whitespace-nowrap">
-                <span className="text-[10px] xl:text-xs font-bold mr-1">OMR</span>
-                {dashboardData?.tenantRevenueToday?.toFixed(3) || "0.000"}
-              </p>
-            </div>
+            {enableTenantSubscription && (
+              <div className="bg-gray-50/50 border border-gray-100 p-3 xl:p-4 rounded-xl hover:shadow-md transition-all duration-300 group hover:bg-white hover:border-premium-gold/20">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 group-hover:text-premium-gold transition-colors">{t('dashboard.tenantRevenue')}</p>
+                <p className="text-base sm:text-lg xl:text-2xl font-black text-gradient-gold drop-shadow-sm whitespace-nowrap">
+                  <span className="text-[10px] xl:text-xs font-bold mr-1">OMR</span>
+                  {dashboardData?.tenantRevenueToday?.toFixed(3) || "0.000"}
+                </p>
+              </div>
+            )}
 
             <div className="bg-gray-50/50 border border-gray-100 p-3 xl:p-4 rounded-xl hover:shadow-md transition-all duration-300 group hover:bg-white hover:border-premium-gold/20">
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 group-hover:text-gray-600 transition-colors">{t('dashboard.activeTime')}</p>
@@ -188,17 +193,19 @@ const Dashboard = () => {
             <div className="bg-gray-50/50 border border-gray-100 p-5 rounded-xl col-span-1 md:col-span-3 hover:shadow-md transition-all duration-300 hover:bg-white">
               <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-5">{t('dashboard.currentOccupancy')}</p>
               <div className="space-y-5">
-                <div className="flex items-center justify-between group">
-                  <div className="flex items-center flex-1">
-                    <div className="w-32 bg-gray-200 rounded-full h-3 mr-4 overflow-hidden shadow-inner">
-                      <div className="bg-premium-black h-full rounded-full transition-all duration-1000 relative" style={{ width: `${typeDist.tenant || 0}%` }}>
-                        <div className="absolute inset-0 bg-white/20 w-full h-full animate-shimmer"></div>
+                {enableTenantSubscription && (
+                  <div className="flex items-center justify-between group">
+                    <div className="flex items-center flex-1">
+                      <div className="w-32 bg-gray-200 rounded-full h-3 mr-4 overflow-hidden shadow-inner">
+                        <div className="bg-premium-black h-full rounded-full transition-all duration-1000 relative" style={{ width: `${typeDist.tenant || 0}%` }}>
+                          <div className="absolute inset-0 bg-white/20 w-full h-full animate-shimmer"></div>
+                        </div>
                       </div>
+                      <span className="text-sm font-bold text-gray-600 group-hover:text-gray-900 transition-colors">{t('dashboard.tenant')}</span>
                     </div>
-                    <span className="text-sm font-bold text-gray-600 group-hover:text-gray-900 transition-colors">{t('dashboard.tenant')}</span>
+                    <span className="text-sm font-black text-gray-900 bg-gray-100 px-3 py-1 rounded-lg border border-gray-200 shadow-sm">{typeDist.tenant_count || 0}</span>
                   </div>
-                  <span className="text-sm font-black text-gray-900 bg-gray-100 px-3 py-1 rounded-lg border border-gray-200 shadow-sm">{typeDist.tenant_count || 0}</span>
-                </div>
+                )}
 
                 <div className="flex items-center justify-between group">
                   <div className="flex items-center flex-1">

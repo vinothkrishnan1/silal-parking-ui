@@ -52,6 +52,11 @@ def create_app():
     app.register_blueprint(parking_bp, url_prefix='/api/parking')
     app.register_blueprint(device_bp)
 
+    @app.route("/api/config/features", methods=["GET"])
+    def get_features():
+        enable_tenant_subscription = os.getenv('ENABLE_TENANT_SUBSCRIPTION', 'False').lower() in ('true', '1', 't')
+        return jsonify({"enable_tenant_subscription": enable_tenant_subscription})
+
     from routes.staff_routes import staff_bp, ensure_staff_pass_schema
     app.register_blueprint(staff_bp, url_prefix='/api/staff-passes')
     with app.app_context():
