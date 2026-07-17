@@ -20,7 +20,8 @@ const computeDuration = (entryTimeStr, exitTimeStr) => {
 };
 
 const VehicleDetails = () => {
-  const { vehiclesData, updateVehiclesData } = useOutletContext();
+  const { vehiclesData, updateVehiclesData, features } = useOutletContext();
+  const enableTenantSubscription = features?.enable_tenant_subscription !== false;
   const { language, t } = useLanguage();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -371,7 +372,7 @@ const VehicleDetails = () => {
           </span>
         </div>
         {slotData ? (
-          <div className={`grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10 ${language === 'ar' ? 'rtl' : 'ltr'}`}>
+          <div className={`grid grid-cols-1 md:grid-cols-${enableTenantSubscription ? '2' : '1'} gap-6 relative z-10 ${language === 'ar' ? 'rtl' : 'ltr'}`}>
             <div className="bg-gray-50/50 p-6 rounded-2xl border border-gray-100 hover:shadow-md hover:bg-white hover:border-premium-gold/20 transition-all duration-300">
               <div className={`flex justify-between items-center mb-5 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
                 <span className={`text-sm font-black text-gray-700 flex items-center gap-2 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
@@ -402,35 +403,37 @@ const VehicleDetails = () => {
               </div>
             </div>
 
-            <div className="bg-gray-50/50 p-6 rounded-2xl border border-gray-100 hover:shadow-md hover:bg-white hover:border-premium-gold/20 transition-all duration-300">
-              <div className={`flex justify-between items-center mb-5 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
-                <span className={`text-sm font-black text-gray-700 flex items-center gap-2 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
-                  <div className="bg-premium-gold/10 p-1.5 rounded-lg text-premium-gold">
-                     <Car size={16} />
+            {enableTenantSubscription && (
+              <div className="bg-gray-50/50 p-6 rounded-2xl border border-gray-100 hover:shadow-md hover:bg-white hover:border-premium-gold/20 transition-all duration-300">
+                <div className={`flex justify-between items-center mb-5 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
+                  <span className={`text-sm font-black text-gray-700 flex items-center gap-2 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
+                    <div className="bg-premium-gold/10 p-1.5 rounded-lg text-premium-gold">
+                       <Car size={16} />
+                    </div>
+                    {t('dashboard.tenantSlots')}
+                  </span>
+                  <span className={`flex items-center gap-1.5 px-3 py-1 text-[10px] font-bold uppercase rounded-lg border ${slotData.tenant?.available > 0 ? 'bg-green-50 text-green-700 border-green-200/60' : 'bg-red-50 text-red-700 border-red-200/60'}`}>
+                    {slotData.tenant?.available > 0 && <span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span></span>}
+                    {slotData.tenant?.available > 0 ? t('vehicles.available') : t('vehicles.full')}
+                  </span>
+                </div>
+                <div className={`flex justify-between items-end ${language === 'ar' ? 'flex-row-reverse text-right' : 'text-left'}`}>
+                  <div>
+                    <p className="text-4xl font-black text-gray-900 tracking-tight">{slotData.tenant?.available}</p>
+                    <p className="text-[11px] font-semibold text-gray-500 mt-1 uppercase tracking-wider">{t('vehicles.available')} / {slotData.tenant?.total} {t('vehicles.total')}</p>
                   </div>
-                  {t('dashboard.tenantSlots')}
-                </span>
-                <span className={`flex items-center gap-1.5 px-3 py-1 text-[10px] font-bold uppercase rounded-lg border ${slotData.tenant?.available > 0 ? 'bg-green-50 text-green-700 border-green-200/60' : 'bg-red-50 text-red-700 border-red-200/60'}`}>
-                  {slotData.tenant?.available > 0 && <span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span></span>}
-                  {slotData.tenant?.available > 0 ? t('vehicles.available') : t('vehicles.full')}
-                </span>
-              </div>
-              <div className={`flex justify-between items-end ${language === 'ar' ? 'flex-row-reverse text-right' : 'text-left'}`}>
-                <div>
-                  <p className="text-4xl font-black text-gray-900 tracking-tight">{slotData.tenant?.available}</p>
-                  <p className="text-[11px] font-semibold text-gray-500 mt-1 uppercase tracking-wider">{t('vehicles.available')} / {slotData.tenant?.total} {t('vehicles.total')}</p>
+                  <div className={language === 'ar' ? 'text-left' : 'text-right'}>
+                    <p className="text-2xl font-bold text-gray-700">{slotData.tenant?.occupied}</p>
+                    <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{t('vehicles.occupied')}</p>
+                  </div>
                 </div>
-                <div className={language === 'ar' ? 'text-left' : 'text-right'}>
-                  <p className="text-2xl font-bold text-gray-700">{slotData.tenant?.occupied}</p>
-                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{t('vehicles.occupied')}</p>
+                <div className="w-full bg-gray-200 rounded-full h-3 mt-6 overflow-hidden shadow-inner">
+                  <div className="bg-gradient-gold h-full rounded-full transition-all duration-1000 relative" style={{ width: `${(slotData.tenant?.occupied / slotData.tenant?.total) * 100}%` }}>
+                    <div className="absolute inset-0 bg-white/20 w-full h-full animate-shimmer" style={{ animationDelay: '0.5s' }}></div>
+                  </div>
                 </div>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-3 mt-6 overflow-hidden shadow-inner">
-                <div className="bg-gradient-gold h-full rounded-full transition-all duration-1000 relative" style={{ width: `${(slotData.tenant?.occupied / slotData.tenant?.total) * 100}%` }}>
-                  <div className="absolute inset-0 bg-white/20 w-full h-full animate-shimmer" style={{ animationDelay: '0.5s' }}></div>
-                </div>
-              </div>
-            </div>
+            )}
           </div>
         ) : (
           <div className="h-32 flex flex-col items-center justify-center gap-3">
