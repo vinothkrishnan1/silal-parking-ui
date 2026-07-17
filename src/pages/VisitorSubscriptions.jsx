@@ -699,94 +699,30 @@ const VisitorVehicles = () => {
                     </button>
                   </div>
                 ) : (
-                  <div className="sm:col-span-2 relative">
-                    <label className={`block text-sm font-semibold text-gray-700 mb-1.5 ${language === 'ar' ? 'text-right' : ''}`}>{t('visitorSubscriptions.selectVisitor')}</label>
-                    <div className="relative">
-                      <Search className={`absolute ${language === 'ar' ? 'right-3' : 'left-3'} top-3.5 text-gray-400`} size={16} />
+                  <div className="sm:col-span-2 space-y-4">
+                    <div>
+                      <label className={`block text-sm font-semibold text-gray-700 mb-1.5 ${language === 'ar' ? 'text-right' : ''}`}>{t('visitorSubscriptions.selectVisitor')} Name</label>
                       <input
                         type="text"
-                        placeholder={t('visitorSubscriptions.masterListPlaceholder')}
-                        value={visitorSearch}
+                        placeholder="Visitor Name"
+                        value={formData.visitor_name || ''}
                         onChange={(event) => {
-                          setVisitorSearch(event.target.value);
-                          setShowDropdown(true);
+                          setFormData({ ...formData, visitor_name: event.target.value, visitor_id: null });
                         }}
-                        onFocus={() => setShowDropdown(true)}
-                        className={`block w-full py-3 bg-gray-50/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-[#121212] focus:border-[#121212] focus:bg-white transition-all text-sm font-medium text-gray-900 shadow-sm ${language === 'ar' ? 'pr-10 pl-10 text-right' : 'pl-10 pr-10 text-left'}`}
+                        className={`block w-full py-3 bg-gray-50/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-[#121212] focus:border-[#121212] focus:bg-white transition-all text-sm font-medium text-gray-900 shadow-sm px-4 ${language === 'ar' ? 'text-right' : 'text-left'}`}
                       />
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          setShowDropdown(!showDropdown);
+                    </div>
+                    <div>
+                      <label className={`block text-sm font-semibold text-gray-700 mb-1.5 ${language === 'ar' ? 'text-right' : ''}`}>Phone Number</label>
+                      <input
+                        type="text"
+                        placeholder="Phone Number"
+                        value={formData.phone_number || ''}
+                        onChange={(event) => {
+                          setFormData({ ...formData, phone_number: event.target.value, visitor_id: null });
                         }}
-                        className={`absolute ${language === 'ar' ? 'left-3' : 'right-3'} top-3.5 text-gray-400 hover:text-gray-600 focus:outline-none`}
-                      >
-                        <ChevronDown
-                          size={16}
-                          className={`transform transition-transform duration-300 ${showDropdown ? 'rotate-180' : ''}`}
-                        />
-                      </button>
-
-                      {showDropdown && (
-                        <div className="absolute z-[100] mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-2xl max-h-60 overflow-y-auto ring-1 ring-black/5">
-                          {filteredMasterVisitors.map((visitor) => (
-                            <div
-                              key={visitor.id}
-                              onClick={() => {
-                                setFormData((prev) => ({
-                                  ...prev,
-                                  visitor_id: visitor.id,
-                                  visitor_name: visitor.visitor_name,
-                                  phone_number: sanitizeDigits(visitor.phone_number || '', 8),
-                                  vehicles: visitor.vehicles?.length ? visitor.vehicles : [],
-                                }));
-                                setVisitorSearch(visitor.visitor_name);
-                                setShowDropdown(false);
-                              }}
-                              className="px-4 py-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-0 flex items-center justify-between"
-                            >
-                              <div className={language === 'ar' ? 'text-right' : ''}>
-                                <div className="font-bold text-gray-900">{visitor.visitor_name}</div>
-                                <div className="text-xs font-semibold text-gray-500">{visitor.phone_number}</div>
-                              </div>
-                            </div>
-                          ))}
-                          {filteredMasterVisitors.length === 0 && (
-                            <div className="px-4 py-4 bg-gray-50/50">
-                              <p className="text-sm font-semibold text-gray-500 text-center mb-3">No matching visitor. Create new:</p>
-                              <div className="flex gap-2">
-                                <input 
-                                  type="text" 
-                                  placeholder="Phone Number"
-                                  className={`block w-full py-2 px-3 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-premium-gold focus:border-premium-gold ${language === 'ar' ? 'text-right' : 'text-left'}`}
-                                  id="newVisitorPhone"
-                                  onClick={(e) => e.stopPropagation()}
-                                />
-                                <button 
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    const phone = document.getElementById('newVisitorPhone').value;
-                                    if(!phone) return alert('Phone number required');
-                                    setFormData((prev) => ({
-                                      ...prev,
-                                      visitor_id: null,
-                                      visitor_name: visitorSearch,
-                                      phone_number: phone,
-                                      vehicles: []
-                                    }));
-                                    setShowDropdown(false);
-                                  }}
-                                  className="px-4 py-2 bg-premium-gold hover:bg-yellow-600 text-white rounded-lg text-sm font-bold whitespace-nowrap shadow-sm transition-colors"
-                                >
-                                  {language === 'ar' ? 'اختيار' : 'Select'}
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
+                        className={`block w-full py-3 bg-gray-50/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-[#121212] focus:border-[#121212] focus:bg-white transition-all text-sm font-medium text-gray-900 shadow-sm px-4 ${language === 'ar' ? 'text-right' : 'text-left'}`}
+                      />
                     </div>
                   </div>
                 )}
