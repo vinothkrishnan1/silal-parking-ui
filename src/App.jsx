@@ -23,6 +23,7 @@ import TenantSubscriptionHistory from './pages/TenantSubscriptionHistory';
 import TenantMaster from './pages/TenantMaster';
 import LocationMaster from './pages/LocationMaster';
 import VisitorSubscriptions from './pages/VisitorSubscriptions';
+import VisitorSubscriptionHistory from './pages/VisitorSubscriptionHistory';
 import LedDashboard from './pages/LedDashboard';
 import HospitalKioskApp from './pages/HospitalKioskApp';
 import { parseBackendDate } from './utils/dateTime';
@@ -396,6 +397,7 @@ function App() {
           <Route path="/add-user" element={<AddUser />} />
           <Route path="/location-master" element={<LocationMaster />} />
           <Route path="/visitor-subscriptions" element={<VisitorSubscriptions />} />
+          <Route path="/visitor-subscription-history" element={<VisitorSubscriptionHistory />} />
           <Route path="/kiosk-management" element={<KioskManagement />} />
           <Route path="/led-display-management" element={<LedDisplayManagement />} />
           <Route path="/boom-barrier-control" element={<BoomBarrierControl />} />

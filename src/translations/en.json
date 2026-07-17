@@ -62,7 +62,8 @@
                     "locationMaster":  "Location Master",
                     "settings":  "Settings",
                     "logout":  "Logout",
-                    "visitorSubscriptions":  "Visitor Subscriptions"
+                    "visitorSubscriptions":  "Visitor Subscriptions",
+                    "visitorHistory":  "Visitor Subscription History"
                 },
     "vehicles":  {
                      "title":  "Vehicle Details",
@@ -750,5 +751,52 @@
                                                     "networkError":  "Cannot connect to the server. Please ensure the backend is running.",
                                                     "unexpectedError":  "An unexpected error occurred. Please try again."
                                                 }
-                             }
+                             },
+    "visitorSubscriptionHistory":  {
+                                       "title":  "Visitor Subscription History",
+                                       "subtitle":  "View live visitor subscription records with correct status, payment, and date history",
+                                       "totalRecords":  "Total Records",
+                                       "active":  "Active",
+                                       "expired":  "Expired",
+                                       "scheduled":  "Scheduled",
+                                       "inactive":  "Inactive",
+                                       "pendingPayment":  "Pending Payment",
+                                       "searchPlaceholder":  "Search by visitor, vehicle, plan, payment status, or transaction...",
+                                       "loading":  "Loading subscription history...",
+                                       "noRecords":  "No subscription history found",
+                                       "adjustFilters":  "Try adjusting your filters or add subscription records first.",
+                                       "visitorInfo":  "Visitor Info",
+                                       "vehicles":  "Vehicles",
+                                       "plan":  "Plan",
+                                       "payment":  "Payment",
+                                       "period":  "Period",
+                                       "status":  "Status",
+                                       "filters":  {
+                                                       "all":  "All",
+                                                       "active":  "Active",
+                                                       "expired":  "Expired",
+                                                       "scheduled":  "Scheduled",
+                                                       "inactive":  "Inactive",
+                                                       "pendingPayment":  "Pending Payment"
+                                                   },
+                                       "customPlan":  "Custom Plan",
+                                       "vehicleTypeNotSet":  "Vehicle type not set",
+                                       "visitor":  "Visitor",
+                                       "paid":  "Paid",
+                                       "pending":  "Pending",
+                                       "allocatedSlots":  "Allocated slots:",
+                                       "paidOn":  "Paid on:",
+                                       "created":  "Created:",
+                                       "showing":  "Showing",
+                                       "to":  "to",
+                                       "of":  "of",
+                                       "records":  "records",
+                                       "rowsPerPage":  "Rows per page",
+                                       "prev":  "Prev",
+                                       "next":  "Next",
+                                       "page":  "Page",
+                                       "outOf":  "of",
+                                       "deleteTitle":  "Delete Subscription",
+                                       "deleteConfirm":  "Are you sure you want to delete this subscription record? This action cannot be undone."
+                                   }
 }

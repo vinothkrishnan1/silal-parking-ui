@@ -62,7 +62,8 @@
                     "locationMaster":  "مدير المواقع",
                     "settings":  "الإعدادات",
                     "logout":  "تسجيل الخروج",
-                    "visitorSubscriptions":  "اشتراكات الزوار"
+                    "visitorSubscriptions":  "اشتراكات الزوار",
+                    "visitorHistory":  "سجل اشتراكات الزوار"
                 },
     "vehicles":  {
                      "title":  "تفاصيل المركبة",
@@ -750,5 +751,52 @@
                                                     "networkError":  "خطأ في الاتصال بالخادم.",
                                                     "unexpectedError":  "حدث خطأ غير متوقع."
                                                 }
-                             }
+                             },
+    "visitorSubscriptionHistory":  {
+                                       "title":  "سجل اشتراكات الزائرين",
+                                       "subtitle":  "عرض تاريخ الاشتراكات، المدفوعات، والحالات",
+                                       "totalRecords":  "إجمالي السجلات",
+                                       "active":  "نشط",
+                                       "expired":  "منتهي",
+                                       "scheduled":  "مجدول",
+                                       "inactive":  "غير نشط",
+                                       "pendingPayment":  "دفع معلق",
+                                       "searchPlaceholder":  "البحث بالزائر، المركبة، الباقة، أو الحالة...",
+                                       "loading":  "جاري التحميل...",
+                                       "noRecords":  "لا توجد سجلات تاريخية.",
+                                       "adjustFilters":  "جرب تغيير الفلاتر.",
+                                       "tenantInfo":  "بيانات الزائر",
+                                       "vehicles":  "المركبات",
+                                       "plan":  "الباقة",
+                                       "payment":  "الدفع",
+                                       "period":  "الفترة",
+                                       "status":  "الحالة",
+                                       "filters":  {
+                                                       "all":  "الكل",
+                                                       "active":  "نشط",
+                                                       "expired":  "منتهي",
+                                                       "scheduled":  "مجدول",
+                                                       "inactive":  "غير نشط",
+                                                       "pendingPayment":  "دفع معلق"
+                                                   },
+                                       "customPlan":  "خطة مخصصة",
+                                       "vehicleTypeNotSet":  "النوع غير محدد",
+                                       "tenant":  "مستأجر",
+                                       "paid":  "مدفوع",
+                                       "pending":  "معلق",
+                                       "allocatedSlots":  "المواقف المخصصة:",
+                                       "paidOn":  "تاريخ الدفع:",
+                                       "created":  "تاريخ الإنشاء:",
+                                       "showing":  "عرض",
+                                       "to":  "إلى",
+                                       "of":  "من",
+                                       "records":  "سجلات",
+                                       "rowsPerPage":  "صفوف لكل صفحة",
+                                       "prev":  "السابق",
+                                       "next":  "التالي",
+                                       "page":  "صفحة",
+                                       "outOf":  "من",
+                                       "deleteTitle":  "حذف الاشتراك",
+                                       "deleteConfirm":  "هل أنت متأكد من حذف سجل الاشتراك؟ لا يمكن التراجع عن هذا الإجراء."
+                                   }
 }
