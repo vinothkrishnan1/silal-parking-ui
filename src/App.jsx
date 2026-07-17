@@ -21,6 +21,8 @@ import BoomBarrierControl from './pages/BoomBarrierControl';
 import TenantVehicles from './pages/TenantVehicles';
 import TenantSubscriptionHistory from './pages/TenantSubscriptionHistory';
 import TenantMaster from './pages/TenantMaster';
+import LocationMaster from './pages/LocationMaster';
+import VisitorSubscriptions from './pages/VisitorSubscriptions';
 import LedDashboard from './pages/LedDashboard';
 import HospitalKioskApp from './pages/HospitalKioskApp';
 import { parseBackendDate } from './utils/dateTime';
@@ -392,6 +394,8 @@ function App() {
           <Route path="/reports" element={<Reports />} />
           <Route path="/payment-report" element={<PaymentReport />} />
           <Route path="/add-user" element={<AddUser />} />
+          <Route path="/location-master" element={<LocationMaster />} />
+          <Route path="/visitor-subscriptions" element={<VisitorSubscriptions />} />
           <Route path="/kiosk-management" element={<KioskManagement />} />
           <Route path="/led-display-management" element={<LedDisplayManagement />} />
           <Route path="/boom-barrier-control" element={<BoomBarrierControl />} />
@@ -430,3 +434,4 @@ function App() {
 }
 
 export default App;
+

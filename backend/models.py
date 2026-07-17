@@ -145,6 +145,7 @@ class Pricing(db.Model):
     # Relationships
     tiers = db.relationship('PricingTier', backref='pricing', lazy=True, cascade="all, delete-orphan")
     tenant_subscriptions = db.relationship('TenantSubscription', backref='subscription_plan', lazy=True)
+    visitor_subscriptions = db.relationship('VisitorSubscription', backref='subscription_plan', lazy=True)
 
     def to_dict(self):
         return {
@@ -341,3 +342,120 @@ class DeviceConfig(db.Model):
             'created_at': serialize_datetime(self.created_at)
         }
 
+class Location(db.Model):
+    __tablename__ = 'locations'
+
+    id = db.Column(db.Integer, primary_key=True)
+    location_name = db.Column(db.String(255), nullable=False, unique=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'location_name': self.location_name,
+            'created_at': serialize_datetime(self.created_at)
+        }
+
+class Visitor(db.Model):
+    __tablename__ = 'visitors'
+
+    id = db.Column(db.Integer, primary_key=True)
+    visitor_name = db.Column(db.String(100), nullable=False)
+    phone_number = db.Column(db.String(20), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Relationships
+    vehicles = db.relationship('VisitorVehicle', backref='visitor', lazy=True, cascade="all, delete-orphan")
+    subscriptions = db.relationship('VisitorSubscription', backref='visitor', lazy=True, cascade="all, delete-orphan")
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'visitor_name': self.visitor_name,
+            'phone_number': self.phone_number,
+            'vehicles': [v.license_plate for v in self.vehicles],
+            'created_at': serialize_datetime(self.created_at)
+        }
+
+class VisitorSubscription(db.Model):
+    __tablename__ = 'visitor_subscriptions'
+    id = db.Column(db.Integer, primary_key=True)
+    visitor_id = db.Column(db.Integer, db.ForeignKey('visitors.id'), nullable=False)
+    subscription_plan_id = db.Column(db.Integer, db.ForeignKey('pricing.id'), nullable=True)
+    
+    start_date = db.Column(db.Date, nullable=False)
+    end_date = db.Column(db.Date, nullable=False)
+    allocated_slots = db.Column(db.Integer, default=1)
+    
+    amount_paid = db.Column(db.Float, default=0.0)
+    payment_method = db.Column(db.String(50))
+    payment_status = db.Column(db.String(50), default='Pending')
+    transaction_id = db.Column(db.String(100))
+    payment_date = db.Column(db.Date)
+    
+    status = db.Column(
+        db.Enum(*SUBSCRIPTION_STATUS_VALUES, name='visitor_subscription_status'),
+        nullable=False,
+        default=SUBSCRIPTION_STATUS_ACTIVE
+    )
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    @property
+    def is_active(self):
+        return self.status == SUBSCRIPTION_STATUS_ACTIVE
+
+    def get_effective_status(self, reference_date=None):
+        today = reference_date or datetime.utcnow().date()
+        stored_status = (self.status or SUBSCRIPTION_STATUS_ACTIVE).lower()
+
+        if stored_status == SUBSCRIPTION_STATUS_INACTIVE:
+            return 'Inactive'
+        if stored_status == SUBSCRIPTION_STATUS_EXPIRED:
+            return 'Expired'
+        if self.end_date and self.end_date < today:
+            return 'Expired'
+        if self.start_date and self.start_date > today:
+            return 'Scheduled'
+        if stored_status == SUBSCRIPTION_STATUS_ACTIVE:
+            return 'Active'
+        return 'Inactive'
+
+    def to_dict(self):
+        effective_status = self.get_effective_status()
+        return {
+            'id': self.id,
+            'visitor_id': self.visitor_id,
+            'visitor_name': self.visitor.visitor_name if self.visitor else "Unknown",
+            'phone_number': self.visitor.phone_number if self.visitor else "",
+            'vehicles': [v.license_plate for v in self.visitor.vehicles] if self.visitor else [],
+            'start_date': self.start_date.isoformat() if self.start_date else None,
+            'end_date': self.end_date.isoformat() if self.end_date else None,
+            'allocated_slots': self.allocated_slots,
+            'subscription_plan_id': self.subscription_plan_id,
+            'subscription_plan_name': self.subscription_plan.name if self.subscription_plan else 'Custom Plan',
+            'subscription_vehicle_type': self.subscription_plan.vehicle_type if self.subscription_plan else None,
+            'amount_paid': self.amount_paid,
+            'payment_method': self.payment_method,
+            'payment_status': self.payment_status,
+            'transaction_id': self.transaction_id,
+            'payment_date': self.payment_date.isoformat() if self.payment_date else None,
+            'status': self.status,
+            'effective_status': effective_status,
+            'is_active': self.is_active,
+            'is_current': effective_status == 'Active',
+            'is_expired': effective_status == 'Expired',
+            'created_at': serialize_datetime(self.created_at)
+        }
+
+class VisitorVehicle(db.Model):
+    __tablename__ = 'visitor_vehicles'
+    id = db.Column(db.Integer, primary_key=True)
+    visitor_id = db.Column(db.Integer, db.ForeignKey('visitors.id'), nullable=False)
+    license_plate = db.Column(db.String(20), unique=True, nullable=False)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'visitor_id': self.visitor_id,
+            'license_plate': self.license_plate
+        }

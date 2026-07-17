@@ -16,7 +16,8 @@ import {
   Bell,
   ChevronsUpDown,
   History,
-  Languages
+  Languages,
+  MapPin
 } from 'lucide-react';
 import NotificationModal from './NotificationModal';
 import { useLanguage } from '../context/LanguageContext';
@@ -40,6 +41,8 @@ const Sidebar = ({ onLogout, notifications, onMarkAsRead, onMarkAllAsRead, onCle
     enableTenantSubscription && { path: '/tenant-vehicles', icon: <Car size={20} />, label: t('sidebar.tenantSubscriptions') },
     enableTenantSubscription && { path: '/tenant-subscription-history', icon: <History size={20} />, label: t('sidebar.tenantHistory') },
     enableTenantSubscription && { path: '/tenant-master', icon: <UserPlus size={20} />, label: t('sidebar.tenantMaster') },
+    { path: '/visitor-subscriptions', icon: <Car size={20} />, label: t('sidebar.visitorSubscriptions') },
+    { path: '/location-master', icon: <MapPin size={20} />, label: t('sidebar.locationMaster') },
     { path: '/cameras', icon: <Camera size={20} />, label: t('sidebar.deviceConfig') },
     { path: '/kiosk-management', icon: <MonitorPlay size={20} />, label: t('sidebar.kioskManagement') },
     { path: '/led-display-management', icon: <MonitorPlay size={20} />, label: t('sidebar.ledDisplayManagement') },

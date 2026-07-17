@@ -20,6 +20,8 @@ from routes.pricing_routes import pricing_bp
 from routes.slot_routes import slot_bp
 from routes.parking_routes import parking_bp
 from routes.device_config_routes import device_bp, ensure_device_config_schema
+from routes.location_routes import location_bp
+from routes.visitor_routes import visitor_bp
 from services.parking_broadcast import broadcast_slot_status
 from services.subscription_status_service import register_subscription_status_lifespan
 from models import DeviceConfig
@@ -51,6 +53,8 @@ def create_app():
     app.register_blueprint(slot_bp, url_prefix='/api/slot')
     app.register_blueprint(parking_bp, url_prefix='/api/parking')
     app.register_blueprint(device_bp)
+    app.register_blueprint(location_bp, url_prefix='/api/locations')
+    app.register_blueprint(visitor_bp, url_prefix='/api/visitors')
 
     @app.route("/api/config/features", methods=["GET"])
     def get_features():
