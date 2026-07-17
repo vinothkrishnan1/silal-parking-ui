@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import {
@@ -24,6 +25,8 @@ import { useLanguage } from '../context/LanguageContext';
 
 const Pricing = () => {
   const { language, content, t } = useLanguage();
+  const { features } = useOutletContext() || {};
+  const enableTenantSubscription = features?.enable_tenant_subscription !== false;
   const [pricingData, setPricingData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState(null);
@@ -352,7 +355,9 @@ const Pricing = () => {
                   required
                 >
                   <option value="Visitor Parking">{t('pricing.visitorParking')}</option>
-                  <option value="Tenant Subscription">{t('pricing.tenantSubscription')}</option>
+                  {enableTenantSubscription && (
+                    <option value="Tenant Subscription">{t('pricing.tenantSubscription')}</option>
+                  )}
                 </select>
               </div>
 
@@ -575,7 +580,7 @@ const Pricing = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-50">
-                {pricingData.map((item) => (
+                {(enableTenantSubscription ? pricingData : pricingData.filter(item => item.pricing_type !== 'Tenant Subscription')).map((item) => (
                   <React.Fragment key={item.id}>
                     <tr className={`hover:bg-gray-50/50 transition-colors ${expandedId === item.id ? 'bg-gray-50/80' : ''} ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
                       <td className={`px-6 py-5 whitespace-nowrap text-sm font-bold text-gray-500 ${language === 'ar' ? 'text-right' : ''}`}>
@@ -685,7 +690,7 @@ const Pricing = () => {
               </tbody>
             </table>
 
-            {pricingData.length === 0 && (
+            {(enableTenantSubscription ? pricingData : pricingData.filter(item => item.pricing_type !== 'Tenant Subscription')).length === 0 && (
               <div className="text-center py-8 text-gray-500">
                 {language === 'ar' ? 'لا توجد بيانات تسعير متاحة. انقر فوق "إضافة تسعير" لإنشاء قواعد تسعير جديدة.' : 'No pricing data available. Click "Add Pricing" to create new pricing rules.'}
               </div>
