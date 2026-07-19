@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Download, Calendar, FileText, Filter, Search, ArrowDown, ArrowUp, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Download, Calendar, FileText, Filter, Search, ArrowDown, ArrowUp, ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
 import { formatAppDateTime, parseBackendDate } from '../utils/dateTime';
 import { apiUrl } from '../utils/api';
 import { useLanguage } from '../context/LanguageContext';
@@ -21,6 +21,22 @@ const computeDuration = (entryTimeStr, exitTimeStr) => {
 const Reports = () => {
   const { language, content, t } = useLanguage();
   const [reportData, setReportData] = useState([]);
+  const [locations, setLocations] = useState([]);
+
+  useEffect(() => {
+    const fetchLocations = async () => {
+      try {
+        const response = await fetch(apiUrl('/api/locations/'));
+        if (response.ok) {
+          const data = await response.json();
+          setLocations(data.filter(loc => loc.is_active));
+        }
+      } catch (err) {
+        console.error('Error fetching locations:', err);
+      }
+    };
+    fetchLocations();
+  }, []);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
@@ -95,7 +111,7 @@ const Reports = () => {
     let filename = `vehicle_report_${new Date().toISOString().slice(0, 10)}`;
     let mimeType = "";
 
-    const header = "Vehicle Number,Entry Time,Exit Time,Type,Status,Duration,Payment Method,Payment Amount (OMR)\n";
+    const header = "Vehicle Number,Entry Time,Exit Time,Type,Location,Status,Duration,Payment Method,Payment Amount (OMR)\n";
 
     const dataToExport = filteredData.map(vehicle => {
       const duration = vehicle.exitTime
@@ -104,12 +120,14 @@ const Reports = () => {
       const status = vehicle.exitTime ? 'Exited' : 'Inside';
       const paymentMethod = vehicle.exitTime ? (vehicle.paymentMethod || 'N/A') : '-';
       const paymentAmount = vehicle.exitTime ? (vehicle.type === 'Staff' ? 'N/A' : (vehicle.paymentAmount || '0.000')) : '-';
+      const locationName = locations.find(loc => loc.id.toString() === vehicle.location_id?.toString())?.location_name || '-';
 
       return [
         vehicle.vehicleNumber,
         vehicle.entryTime,
         vehicle.exitTime || '',
         vehicle.type,
+        locationName,
         status,
         duration,
         paymentMethod,
@@ -252,13 +270,14 @@ const Reports = () => {
           <table className="min-w-full divide-y divide-gray-100">
             <thead className="bg-gray-50/80">
               <tr className={language === 'ar' ? 'flex-row-reverse' : ''}>
-                {['vehicleNumber', 'entryTime', 'exitTime', 'type'].map(field => (
+                {['vehicleNumber', 'entryTime', 'exitTime', 'type', 'location_id'].map(field => (
                   <th key={field} scope="col" className={`px-6 py-5 ${language === 'ar' ? 'text-right' : 'text-left'} text-[11px] font-black text-gray-400 uppercase tracking-widest cursor-pointer hover:text-premium-gold transition-colors`} onClick={() => handleSort(field)}>
                     <div className={`flex items-center ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
                       {field === 'vehicleNumber' ? t('vehicles.vehicleNumber') :
                         field === 'entryTime' ? t('vehicles.entryTime') :
                           field === 'exitTime' ? t('vehicles.exitTime') :
-                            field === 'type' ? t('vehicles.type') : field}
+                            field === 'type' ? t('vehicles.type') : 
+                              field === 'location_id' ? (t('common.location') === 'common.location' ? 'Location' : (t('common.location') || 'Location')) : field}
                       {sortField === field && <span className={`${language === 'ar' ? 'mr-1' : 'ml-1'} text-premium-gold`}><ArrowUp size={14} className={sortDirection === 'desc' ? 'rotate-180 transition-transform' : 'transition-transform'} /></span>}
                     </div>
                   </th>
@@ -286,6 +305,12 @@ const Reports = () => {
                     <td className={`px-6 py-5 whitespace-nowrap text-sm font-bold text-gray-600 ${language === 'ar' ? 'text-right' : ''}`}>{formatAppDateTime(vehicle.entryTime, vehicle.entryTime)}</td>
                     <td className={`px-6 py-5 whitespace-nowrap text-sm font-bold text-gray-600 ${language === 'ar' ? 'text-right' : ''}`}>{vehicle.exitTime ? formatAppDateTime(vehicle.exitTime, vehicle.exitTime) : '-'}</td>
                     <td className={`px-6 py-5 whitespace-nowrap ${language === 'ar' ? 'text-right' : ''}`}>{getTypeBadge(vehicle.type)}</td>
+                    <td className={`px-6 py-5 whitespace-nowrap ${language === 'ar' ? 'text-right' : ''}`}>
+                      <div className={`flex items-center gap-2 text-sm font-bold text-gray-700 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
+                        <MapPin size={15} className="text-gray-400 group-hover:text-premium-gold transition-colors" />
+                        <span>{locations.find(loc => loc.id.toString() === vehicle.location_id?.toString())?.location_name || '-'}</span>
+                      </div>
+                    </td>
                     <td className={`px-6 py-5 whitespace-nowrap ${language === 'ar' ? 'text-right' : ''}`}>{getStatusBadge(vehicle.exitTime)}</td>
                     <td className={`px-6 py-5 whitespace-nowrap text-sm font-black text-gray-700 ${language === 'ar' ? 'text-right' : ''}`}>{duration}</td>
                     <td className={`px-6 py-5 whitespace-nowrap ${language === 'ar' ? 'text-right' : ''}`}>{vehicle.exitTime ? getPaymentMethodBadge(vehicle.paymentMethod) : '-'}</td>
