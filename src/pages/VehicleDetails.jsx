@@ -36,10 +36,30 @@ const VehicleDetails = () => {
   const [addFormState, setAddFormState] = useState({ vehicleNumber: '', entryTime: '', type: 'Visitor', plateImage: 'https://placehold.co/300x100/333/white?text=NEW+PLATE' });
   const [slotData, setSlotData] = useState(null);
   const [tick, setTick] = useState(0);
+  const [locations, setLocations] = useState([]);
+  const [selectedLocation, setSelectedLocation] = useState('all');
+
+  useEffect(() => {
+    const fetchLocations = async () => {
+      try {
+        const response = await fetch(apiUrl('/api/locations/'));
+        if (response.ok) {
+          const data = await response.json();
+          setLocations(data.filter(loc => loc.is_active));
+        }
+      } catch (err) {
+        console.error('Error fetching locations:', err);
+      }
+    };
+    fetchLocations();
+  }, []);
 
   const fetchSlotData = async () => {
     try {
-      const response = await fetch(apiUrl('/api/vehicles/dashboard'));
+      const url = selectedLocation === 'all' 
+        ? apiUrl('/api/vehicles/dashboard') 
+        : apiUrl(`/api/vehicles/dashboard?location_id=${selectedLocation}`);
+      const response = await fetch(url);
       const data = await response.json();
       setSlotData(data);
     } catch (error) {
@@ -51,7 +71,7 @@ const VehicleDetails = () => {
     fetchSlotData();
     const interval = setInterval(fetchSlotData, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [selectedLocation]);
 
   useEffect(() => {
     const timer = setInterval(() => setTick(t => t + 1), 60000);
@@ -65,6 +85,7 @@ const VehicleDetails = () => {
   const vehiclesInsideParking = vehiclesData.filter(vehicle => !vehicle.exitTime);
 
   const filteredVehiclesToDisplay = vehiclesInsideParking.filter(vehicle => {
+    if (selectedLocation !== 'all' && vehicle.location_id?.toString() !== selectedLocation) return false;
     if (searchTerm && !vehicle.vehicleNumber.toLowerCase().includes(searchTerm.toLowerCase())) return false;
     return true;
   });
@@ -358,6 +379,32 @@ const VehicleDetails = () => {
             <span className="text-sm">{t('vehicles.addVehicle')}</span>
           </button>
         </div>
+      </div>
+
+      <div className={`flex overflow-x-auto gap-2 mb-8 pb-2 scrollbar-premium ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
+        <button
+          onClick={() => { setSelectedLocation('all'); setSlotData(null); }}
+          className={`px-6 py-2.5 rounded-xl font-bold text-sm whitespace-nowrap transition-all duration-300 ${
+            selectedLocation === 'all'
+              ? 'bg-gradient-to-r from-premium-black to-[#1a1a1a] text-white shadow-lg shadow-black/20 scale-105'
+              : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:text-gray-900'
+          }`}
+        >
+          {t('common.all') === 'common.all' ? 'All Locations' : (t('common.all') || 'All Locations')}
+        </button>
+        {locations.map((loc) => (
+          <button
+            key={loc.id}
+            onClick={() => { setSelectedLocation(loc.id.toString()); setSlotData(null); }}
+            className={`px-6 py-2.5 rounded-xl font-bold text-sm whitespace-nowrap transition-all duration-300 ${
+              selectedLocation === loc.id.toString()
+                ? 'bg-gradient-to-r from-premium-black to-[#1a1a1a] text-white shadow-lg shadow-black/20 scale-105'
+                : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:text-gray-900'
+            }`}
+          >
+            {loc.location_name}
+          </button>
+        ))}
       </div>
 
       <div className="premium-card p-6 mb-8 no-print relative overflow-hidden">

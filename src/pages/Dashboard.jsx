@@ -137,7 +137,7 @@ const Dashboard = () => {
               : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:text-gray-900'
           }`}
         >
-          {t('common.all') || 'All Locations'}
+          {t('common.all') === 'common.all' ? 'All Locations' : (t('common.all') || 'All Locations')}
         </button>
         {locations.map((loc) => (
           <button
