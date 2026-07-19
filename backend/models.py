@@ -67,7 +67,7 @@ class Vehicle(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     license_plate = db.Column(db.String(20), nullable=False)
-    location_id = db.Column(db.Integer, db.ForeignKey('locations.id'), nullable=True)
+    location_id = db.Column(db.Integer, db.ForeignKey('locations.id', ondelete="SET NULL"), nullable=True)
     # vehicle_type = db.Column(db.String(50))
     
     # Audit fields
@@ -299,7 +299,7 @@ class ParkingSettings(db.Model):
     __tablename__ = 'parking_settings'
 
     id = db.Column(db.Integer, primary_key=True)
-    location_id = db.Column(db.Integer, db.ForeignKey('locations.id'), nullable=True)
+    location_id = db.Column(db.Integer, db.ForeignKey('locations.id', ondelete="CASCADE"), nullable=True)
     total_visitor_slots = db.Column(db.Integer, default=100)
     total_tenant_slots = db.Column(db.Integer, default=100)
     visitor_reserved = db.Column(db.Integer, default=0)
@@ -351,12 +351,14 @@ class Location(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     location_name = db.Column(db.String(255), nullable=False, unique=True)
+    is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     def to_dict(self):
         return {
             'id': self.id,
             'location_name': self.location_name,
+            'is_active': self.is_active,
             'created_at': serialize_datetime(self.created_at)
         }
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Plus, Edit2, Trash2, Search, X, MapPin, AlertCircle, RefreshCw } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, X, MapPin, AlertCircle, RefreshCw, Archive, RotateCcw } from 'lucide-react';
 import { API_BASE_URL } from '../utils/api';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -89,8 +89,17 @@ const LocationMaster = () => {
       fetchLocations();
       setDeleteConfirmId(null);
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to delete location');
+      setError(err.response?.data?.error || 'Failed to archive location');
       setDeleteConfirmId(null);
+    }
+  };
+
+  const handleRestore = async (id) => {
+    try {
+      await axios.put(`${API_BASE_URL}/api/locations/${id}/restore`);
+      fetchLocations();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to restore location');
     }
   };
 
@@ -174,6 +183,7 @@ const LocationMaster = () => {
                   <th className={`px-6 py-4 font-semibold ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                     {t('locationMaster.locationName')}
                   </th>
+                  <th className="px-6 py-4 font-semibold text-center w-32">Status</th>
                   <th className="px-6 py-4 font-semibold text-center w-24">Actions</th>
                 </tr>
               </thead>
@@ -188,20 +198,40 @@ const LocationMaster = () => {
                         <div className="font-bold text-gray-900">{location.location_name}</div>
                       </div>
                     </td>
+                    <td className="px-6 py-4 text-center">
+                      {location.is_active ? (
+                        <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full">Active</span>
+                      ) : (
+                        <span className="px-3 py-1 bg-gray-100 text-gray-700 text-xs font-bold rounded-full">Archived</span>
+                      )}
+                    </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          onClick={() => openEditModal(location)}
-                          className="p-2 text-gray-400 hover:text-premium-gold hover:bg-premium-gold/10 rounded-lg transition-colors"
-                        >
-                          <Edit2 size={18} />
-                        </button>
-                        <button
-                          onClick={() => setDeleteConfirmId(location.id)}
-                          className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                        >
-                          <Trash2 size={18} />
-                        </button>
+                        {location.is_active ? (
+                          <>
+                            <button
+                              onClick={() => openEditModal(location)}
+                              className="p-2 text-gray-400 hover:text-premium-gold hover:bg-premium-gold/10 rounded-lg transition-colors"
+                            >
+                              <Edit2 size={18} />
+                            </button>
+                            <button
+                              onClick={() => setDeleteConfirmId(location.id)}
+                              className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Archive"
+                            >
+                              <Archive size={18} />
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            onClick={() => handleRestore(location.id)}
+                            className="p-2 text-gray-400 hover:text-green-500 hover:bg-green-50 rounded-lg transition-colors"
+                            title="Restore"
+                          >
+                            <RotateCcw size={18} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -288,10 +318,10 @@ const LocationMaster = () => {
           <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm" onClick={() => setDeleteConfirmId(null)}></div>
           <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden text-center p-8 border border-gray-100">
             <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Trash2 className="text-red-500" size={36} />
+              <Archive className="text-red-500" size={36} />
             </div>
-            <h3 className="text-2xl font-black text-gray-900 mb-2 tracking-tight">Delete Location?</h3>
-            <p className="text-gray-500 text-sm font-medium mb-8">{t('locationMaster.confirmDelete')}</p>
+            <h3 className="text-2xl font-black text-gray-900 mb-2 tracking-tight">Archive Location?</h3>
+            <p className="text-gray-500 text-sm font-medium mb-8">Are you sure you want to archive this location? It will be hidden from new bookings.</p>
             <div className={`flex gap-3 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
               <button
                 onClick={() => setDeleteConfirmId(null)}
@@ -303,7 +333,7 @@ const LocationMaster = () => {
                 onClick={() => handleDelete(deleteConfirmId)}
                 className="flex-1 px-6 py-4 bg-red-500 text-white font-black rounded-xl hover:bg-red-600 hover:shadow-lg hover:shadow-red-500/30 transition-all text-sm tracking-wide"
               >
-                Delete
+                Archive
               </button>
             </div>
           </div>

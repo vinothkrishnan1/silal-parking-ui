@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 from extensions import db
+from sqlalchemy.exc import IntegrityError
 from models import Location
 
 location_bp = Blueprint('location', __name__)
@@ -64,9 +65,24 @@ def delete_location(location_id):
         if not location:
             return jsonify({'error': 'Location not found'}), 404
 
-        db.session.delete(location)
+        # Soft delete: set is_active to False
+        location.is_active = False
         db.session.commit()
-        return jsonify({'message': 'Location deleted successfully'}), 200
+        return jsonify({'message': 'Location archived successfully'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@location_bp.route('/<int:location_id>/restore', methods=['PUT'])
+def restore_location(location_id):
+    try:
+        location = Location.query.get(location_id)
+        if not location:
+            return jsonify({'error': 'Location not found'}), 404
+
+        location.is_active = True
+        db.session.commit()
+        return jsonify(location.to_dict()), 200
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500

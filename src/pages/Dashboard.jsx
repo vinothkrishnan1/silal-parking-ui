@@ -24,7 +24,7 @@ const Dashboard = () => {
         const response = await fetch(apiUrl('/api/locations/'));
         if (response.ok) {
           const data = await response.json();
-          setLocations(data);
+          setLocations(data.filter(loc => loc.is_active));
         }
       } catch (err) {
         console.error('Error fetching locations:', err);
