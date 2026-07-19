@@ -71,27 +71,30 @@ def get_dashboard_data():
             
             base_vehicle_query = Vehicle.query.filter_by(location_id=location_id)
         else:
+            from models import Location
+            active_locations = Location.query.filter_by(is_active=True).all()
+            active_location_ids = [loc.id for loc in active_locations]
+            
             all_settings = ParkingSettings.query.all()
             
-            # If we have location-specific settings, filter out the global one
-            location_specific_settings = [s for s in all_settings if s.location_id is not None]
+            # If we have location-specific settings for active locations, use them
+            location_specific_settings = [s for s in all_settings if s.location_id in active_location_ids]
             
             if location_specific_settings:
                 settings_to_sum = location_specific_settings
-            elif all_settings:
-                settings_to_sum = all_settings
+                base_vehicle_query = Vehicle.query.filter(Vehicle.location_id.in_(active_location_ids))
+            elif all_settings and not Location.query.count():
+                settings_to_sum = [s for s in all_settings if s.location_id is None]
+                base_vehicle_query = Vehicle.query
             else:
-                settings = ParkingSettings(total_visitor_slots=100, total_tenant_slots=100)
-                db.session.add(settings)
-                db.session.commit()
+                settings = ParkingSettings(total_visitor_slots=0, total_tenant_slots=0)
                 settings_to_sum = [settings]
+                base_vehicle_query = Vehicle.query.filter(Vehicle.location_id.in_(active_location_ids)) if active_location_ids else Vehicle.query.filter(False)
                 
             total_visitor_staff = sum(s.total_visitor_slots for s in settings_to_sum)
             total_tenant = sum(s.total_tenant_slots for s in settings_to_sum)
             visitor_reserved = sum((s.visitor_reserved or 0) for s in settings_to_sum)
             tenant_reserved = sum((s.tenant_reserved or 0) for s in settings_to_sum)
-            
-            base_vehicle_query = Vehicle.query
         
         # Dynamic counts
         occupied_visitor_staff = base_vehicle_query.filter(
