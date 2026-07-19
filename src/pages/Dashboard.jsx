@@ -15,6 +15,23 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [showOverdueAlertModal, setShowOverdueAlertModal] = useState(false);
   const [error, setError] = useState(null);
+  const [locations, setLocations] = useState([]);
+  const [selectedLocation, setSelectedLocation] = useState('all');
+
+  useEffect(() => {
+    const fetchLocations = async () => {
+      try {
+        const response = await fetch(apiUrl('/api/locations/'));
+        if (response.ok) {
+          const data = await response.json();
+          setLocations(data);
+        }
+      } catch (err) {
+        console.error('Error fetching locations:', err);
+      }
+    };
+    fetchLocations();
+  }, []);
 
   const overdueVehicles = useMemo(() => {
     const now = new Date();
@@ -44,7 +61,7 @@ const Dashboard = () => {
 
   const fetchDashboardData = async () => {
     try {
-      const response = await fetch(apiUrl('/api/vehicles/dashboard'));
+      const response = await fetch(apiUrl(`/api/vehicles/dashboard?location_id=${selectedLocation}`));
       if (!response.ok) {
         throw new Error(`Server error: ${response.status}`);
       }
@@ -66,7 +83,7 @@ const Dashboard = () => {
     fetchDashboardData();
     const interval = setInterval(fetchDashboardData, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [selectedLocation]);
 
   if (loading && !dashboardData) {
     return (
@@ -109,6 +126,32 @@ const Dashboard = () => {
           <div className="absolute inset-0 bg-premium-gold/30 blur-xl rounded-full"></div>
           <div className="h-1.5 w-24 bg-gradient-gold rounded-full relative z-10"></div>
         </div>
+      </div>
+
+      <div className="flex overflow-x-auto gap-2 mb-8 pb-2 scrollbar-premium">
+        <button
+          onClick={() => { setSelectedLocation('all'); setDashboardData(null); setLoading(true); }}
+          className={`px-6 py-2.5 rounded-xl font-bold text-sm whitespace-nowrap transition-all duration-300 ${
+            selectedLocation === 'all'
+              ? 'bg-gradient-to-r from-premium-black to-[#1a1a1a] text-white shadow-lg shadow-black/20 scale-105'
+              : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:text-gray-900'
+          }`}
+        >
+          {t('common.all') || 'All Locations'}
+        </button>
+        {locations.map((loc) => (
+          <button
+            key={loc.id}
+            onClick={() => { setSelectedLocation(loc.id.toString()); setDashboardData(null); setLoading(true); }}
+            className={`px-6 py-2.5 rounded-xl font-bold text-sm whitespace-nowrap transition-all duration-300 ${
+              selectedLocation === loc.id.toString()
+                ? 'bg-gradient-to-r from-premium-black to-[#1a1a1a] text-white shadow-lg shadow-black/20 scale-105'
+                : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:text-gray-900'
+            }`}
+          >
+            {loc.location_name}
+          </button>
+        ))}
       </div>
 
       <div className={`grid grid-cols-1 md:grid-cols-2 ${enableTenantSubscription ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-6 mb-8`}>

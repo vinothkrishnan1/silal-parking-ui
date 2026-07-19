@@ -49,29 +49,56 @@ def get_dashboard_data():
     Returns metrics for the dashboard.
     """
     try:
+        from flask import request
         from models import ParkingSettings, TenantSubscription
         from datetime import datetime, timedelta
         now = datetime.utcnow()
         today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
         
-        # 1. Slot Stats (Grouped: Visitor+Staff vs Tenant)
-        settings = ParkingSettings.query.first()
-        if not settings:
-            settings = ParkingSettings(total_visitor_slots=100, total_tenant_slots=100)
-            db.session.add(settings)
-            db.session.commit()
+        location_id = request.args.get('location_id')
+        
+        if location_id and location_id != 'all':
+            location_id = int(location_id)
+            settings = ParkingSettings.query.filter_by(location_id=location_id).first()
+            if not settings:
+                settings = ParkingSettings(location_id=location_id, total_visitor_slots=100, total_tenant_slots=100)
+                db.session.add(settings)
+                db.session.commit()
+            total_visitor_staff = settings.total_visitor_slots
+            total_tenant = settings.total_tenant_slots
+            visitor_reserved = settings.visitor_reserved or 0
+            tenant_reserved = settings.tenant_reserved or 0
             
-        total_visitor_staff = settings.total_visitor_slots
-        total_tenant = settings.total_tenant_slots
-        visitor_reserved = settings.visitor_reserved or 0
-        tenant_reserved = settings.tenant_reserved or 0
+            base_vehicle_query = Vehicle.query.filter_by(location_id=location_id)
+        else:
+            all_settings = ParkingSettings.query.all()
+            
+            # If we have location-specific settings, filter out the global one
+            location_specific_settings = [s for s in all_settings if s.location_id is not None]
+            
+            if location_specific_settings:
+                settings_to_sum = location_specific_settings
+            elif all_settings:
+                settings_to_sum = all_settings
+            else:
+                settings = ParkingSettings(total_visitor_slots=100, total_tenant_slots=100)
+                db.session.add(settings)
+                db.session.commit()
+                settings_to_sum = [settings]
+                
+            total_visitor_staff = sum(s.total_visitor_slots for s in settings_to_sum)
+            total_tenant = sum(s.total_tenant_slots for s in settings_to_sum)
+            visitor_reserved = sum((s.visitor_reserved or 0) for s in settings_to_sum)
+            tenant_reserved = sum((s.tenant_reserved or 0) for s in settings_to_sum)
+            
+            base_vehicle_query = Vehicle.query
         
         # Dynamic counts
-        occupied_visitor_staff = Vehicle.query.filter(
+        occupied_visitor_staff = base_vehicle_query.filter(
             Vehicle.status == 'in',
             Vehicle.vehicle_category.in_(['Visitor', 'Staff'])
         ).count()
-        occupied_tenant = Vehicle.query.filter_by(status='in', vehicle_category='Tenant').count()
+        occupied_tenant = base_vehicle_query.filter_by(status='in', vehicle_category='Tenant').count()
         
         available_visitor_staff = max(0, total_visitor_staff - occupied_visitor_staff - visitor_reserved)
         available_tenant = max(0, total_tenant - occupied_tenant - tenant_reserved)
@@ -82,14 +109,18 @@ def get_dashboard_data():
         total_reserved = visitor_reserved + tenant_reserved
         
         # 2. Entry/Exit Stats
-        entered_today = Vehicle.query.filter(Vehicle.entry_time >= today_start).count()
-        exited_today = Vehicle.query.filter(Vehicle.exit_time >= today_start).count()
+        entered_today = base_vehicle_query.filter(Vehicle.entry_time >= today_start).count()
+        exited_today = base_vehicle_query.filter(Vehicle.exit_time >= today_start).count()
         
         # 3. Revenue (Today)
-        visitor_revenue = db.session.query(func.sum(Vehicle.payable_amount)).filter(
+        visitor_revenue_query = db.session.query(func.sum(Vehicle.payable_amount)).filter(
             Vehicle.exit_time >= today_start,
             Vehicle.payment_status == 'paid'
-        ).scalar() or 0.0
+        )
+        if location_id and location_id != 'all':
+            visitor_revenue_query = visitor_revenue_query.filter(Vehicle.location_id == location_id)
+            
+        visitor_revenue = visitor_revenue_query.scalar() or 0.0
         
         sub_revenue = db.session.query(func.sum(TenantSubscription.amount_paid)).filter(
             TenantSubscription.created_at >= today_start
@@ -103,8 +134,8 @@ def get_dashboard_data():
             hour_start = today_start + timedelta(hours=i)
             hour_end = today_start + timedelta(hours=i+1)
             
-            entries = Vehicle.query.filter(Vehicle.entry_time >= hour_start, Vehicle.entry_time < hour_end).count()
-            exits = Vehicle.query.filter(Vehicle.exit_time >= hour_start, Vehicle.exit_time < hour_end).count()
+            entries = base_vehicle_query.filter(Vehicle.entry_time >= hour_start, Vehicle.entry_time < hour_end).count()
+            exits = base_vehicle_query.filter(Vehicle.exit_time >= hour_start, Vehicle.exit_time < hour_end).count()
             
             vehicle_flow.append({
                 'time': hour_start.strftime('%H:00'),
@@ -113,9 +144,9 @@ def get_dashboard_data():
             })
             
         # 5. Vehicle Type Distribution (Current)
-        staff_count = Vehicle.query.filter_by(status='in', vehicle_category='Staff').count()
-        tenant_count = Vehicle.query.filter_by(status='in', vehicle_category='Tenant').count()
-        visitor_count = Vehicle.query.filter_by(status='in', vehicle_category='Visitor').count()
+        staff_count = base_vehicle_query.filter_by(status='in', vehicle_category='Staff').count()
+        tenant_count = base_vehicle_query.filter_by(status='in', vehicle_category='Tenant').count()
+        visitor_count = base_vehicle_query.filter_by(status='in', vehicle_category='Visitor').count()
         
         total_current = occupied_count if occupied_count > 0 else 1
         staff_pct = round((staff_count / total_current) * 100)
@@ -133,7 +164,7 @@ def get_dashboard_data():
                 most_active_time = f"{h:02d}:00 - {h+1:02d}:00"
 
         # 7. Recent Activity
-        recent_vehicles = Vehicle.query.order_by(desc(case(
+        recent_vehicles = base_vehicle_query.order_by(desc(case(
             (Vehicle.exit_time != None, Vehicle.exit_time),
             else_=Vehicle.entry_time
         ))).limit(3).all()

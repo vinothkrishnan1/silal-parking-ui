@@ -67,6 +67,7 @@ class Vehicle(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     license_plate = db.Column(db.String(20), nullable=False)
+    location_id = db.Column(db.Integer, db.ForeignKey('locations.id'), nullable=True)
     # vehicle_type = db.Column(db.String(50))
     
     # Audit fields
@@ -96,6 +97,7 @@ class Vehicle(db.Model):
         return {
             'id': self.id,
             'license_plate': self.license_plate,
+            'location_id': self.location_id,
             'entry_time': serialize_datetime(self.entry_time),
             'exit_time': serialize_datetime(self.exit_time),
             'status': self.status,
@@ -297,6 +299,7 @@ class ParkingSettings(db.Model):
     __tablename__ = 'parking_settings'
 
     id = db.Column(db.Integer, primary_key=True)
+    location_id = db.Column(db.Integer, db.ForeignKey('locations.id'), nullable=True)
     total_visitor_slots = db.Column(db.Integer, default=100)
     total_tenant_slots = db.Column(db.Integer, default=100)
     visitor_reserved = db.Column(db.Integer, default=0)
@@ -308,6 +311,7 @@ class ParkingSettings(db.Model):
     def to_dict(self):
         return {
             'id': self.id,
+            'location_id': self.location_id,
             'total_visitor_slots': self.total_visitor_slots,
             'total_tenant_slots': self.total_tenant_slots,
             'visitor_reserved': self.visitor_reserved,
