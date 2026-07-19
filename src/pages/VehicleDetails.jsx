@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Search, Filter, Calendar, Clock, Car, X, Eye, Plus, QrCode, Check, Printer, CreditCard, DollarSign, FileText, Ticket, Users, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Filter, Calendar, Clock, Car, X, Eye, Plus, QrCode, Check, Printer, CreditCard, DollarSign, FileText, Ticket, Users, ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
 import { mockTieredPricingData } from '../data/mockData';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatAppDateTime, parseBackendDate } from '../utils/dateTime';
@@ -524,6 +524,7 @@ const VehicleDetails = () => {
                 <th scope="col" className={`px-6 py-5 ${language === 'ar' ? 'text-right' : 'text-left'} text-[11px] font-black text-gray-400 uppercase tracking-widest`}>{t('vehicles.vehicleNumber')}</th>
                 <th scope="col" className={`px-6 py-5 ${language === 'ar' ? 'text-right' : 'text-left'} text-[11px] font-black text-gray-400 uppercase tracking-widest`}>{t('vehicles.entryTime')}</th>
                 <th scope="col" className={`px-6 py-5 ${language === 'ar' ? 'text-right' : 'text-left'} text-[11px] font-black text-gray-400 uppercase tracking-widest`}>{t('vehicles.type')}</th>
+                <th scope="col" className={`px-6 py-5 ${language === 'ar' ? 'text-right' : 'text-left'} text-[11px] font-black text-gray-400 uppercase tracking-widest`}>{t('common.location') === 'common.location' ? 'Location' : (t('common.location') || 'Location')}</th>
                 <th scope="col" className={`px-6 py-5 ${language === 'ar' ? 'text-right' : 'text-left'} text-[11px] font-black text-gray-400 uppercase tracking-widest`}>{t('vehicles.anprImage')}</th>
                 <th scope="col" className={`px-6 py-5 ${language === 'ar' ? 'text-right' : 'text-left'} text-[11px] font-black text-gray-400 uppercase tracking-widest`}>{t('vehicles.actions')}</th>
               </tr>
@@ -546,6 +547,12 @@ const VehicleDetails = () => {
                     </div>
                   </td>
                   <td className={`px-6 py-5 whitespace-nowrap ${language === 'ar' ? 'text-right' : 'text-left'}`}>{getTypeBadge(vehicle.type)}</td>
+                  <td className={`px-6 py-5 whitespace-nowrap ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+                    <div className={`flex items-center gap-2 text-sm font-bold text-gray-700 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
+                      <MapPin size={15} className="text-gray-400 group-hover:text-premium-gold transition-colors" />
+                      <span>{locations.find(loc => loc.id.toString() === vehicle.location_id?.toString())?.location_name || '-'}</span>
+                    </div>
+                  </td>
                   <td className={`px-6 py-5 whitespace-nowrap ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                     <div className="w-32 h-10 bg-gray-900 rounded-lg border border-gray-200 overflow-hidden shadow-sm group-hover:shadow-md relative cursor-pointer transition-all" onClick={() => handlePreview(vehicle)}>
                       <img src={vehicle.plateImage} alt="Plate" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
