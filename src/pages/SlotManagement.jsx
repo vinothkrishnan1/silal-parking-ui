@@ -19,10 +19,28 @@ const SlotManagement = () => {
     visitor_reserved: 0,
     tenant_reserved: 0
   });
+  const [locations, setLocations] = useState([]);
+  const [selectedLocation, setSelectedLocation] = useState('all');
+
+
+  const fetchLocations = async () => {
+    try {
+      const response = await fetch(apiUrl('/api/locations/'));
+      if (response.ok) {
+        const data = await response.json();
+        setLocations(data.filter(loc => loc.is_active));
+      }
+    } catch (err) {
+      console.error('Error fetching locations:', err);
+    }
+  };
 
   const fetchSlotDetails = async () => {
     try {
-      const response = await fetch(apiUrl('/api/slot/list-slot-details'));
+      const url = selectedLocation === 'all' 
+        ? apiUrl('/api/slot/list-slot-details?location_id=all')
+        : apiUrl(`/api/slot/list-slot-details?location_id=${selectedLocation}`);
+      const response = await fetch(url);
       if (!response.ok) {
         throw new Error(`Server error: ${response.status}`);
       }
@@ -38,10 +56,14 @@ const SlotManagement = () => {
   };
 
   useEffect(() => {
+    fetchLocations();
+  }, []);
+
+  useEffect(() => {
     fetchSlotDetails();
     const interval = setInterval(fetchSlotDetails, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [selectedLocation]);
 
   const handleEditSlots = () => {
     if (!slotData) return;
@@ -68,7 +90,7 @@ const SlotManagement = () => {
       const response = await fetch(apiUrl('/api/slot/update-settings'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({ ...formData, location_id: selectedLocation })
       });
       if (response.ok) {
         setShowModal(false);
@@ -200,18 +222,48 @@ const SlotManagement = () => {
 
   return (
     <div className="p-6 md:p-8 max-w-[1600px] mx-auto" dir={language === 'ar' ? 'rtl' : 'ltr'}>
-      <div className="mb-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+      <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
           <h1 className="font-logo text-3xl font-black text-gray-900 tracking-wide">{t('slotManagement.title')}</h1>
           <p className="text-gray-500 mt-1 font-medium">{t('slotManagement.subtitle')}</p>
         </div>
-        <button
-          className="ripple-button px-6 py-3.5 bg-gradient-to-r from-premium-black to-[#1a1a1a] text-white rounded-xl hover:shadow-lg hover:shadow-black/20 active:scale-95 flex items-center focus:outline-none group transition-all"
-          onClick={handleEditSlots}
-        >
-          <Edit size={18} className={`text-premium-gold transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12 ${language === 'ar' ? 'ml-2' : 'mr-2'}`} />
-          <span className="font-bold text-sm tracking-wide">{t('slotManagement.updateAllocation')}</span>
-        </button>
+        {selectedLocation !== 'all' && (
+          <button
+            className="ripple-button px-6 py-3.5 bg-gradient-to-r from-premium-black to-[#1a1a1a] text-white rounded-xl hover:shadow-lg hover:shadow-black/20 active:scale-95 flex items-center focus:outline-none group transition-all"
+            onClick={handleEditSlots}
+          >
+            <Edit size={18} className={`text-premium-gold transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12 ${language === 'ar' ? 'ml-2' : 'mr-2'}`} />
+            <span className="font-bold text-sm tracking-wide">{t('slotManagement.updateAllocation')}</span>
+          </button>
+        )}
+      </div>
+      
+      {/* Location Tabs */}
+      <div className="mb-10 w-full overflow-x-auto custom-scrollbar pb-2">
+        <div className={`flex gap-3 ${language === 'ar' ? 'flex-row-reverse' : ''} min-w-max px-1`}>
+          <button
+            onClick={() => setSelectedLocation('all')}
+            className={`px-6 py-3.5 rounded-xl font-bold text-sm whitespace-nowrap transition-all flex items-center gap-2 shadow-sm
+              ${selectedLocation === 'all' 
+                ? 'bg-gradient-to-r from-premium-gold to-yellow-600 text-white shadow-premium-gold/30' 
+                : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-100 hover:border-premium-gold/30'}`}
+          >
+            {t('dashboard.allLocations') || 'All Locations'}
+          </button>
+          
+          {locations.map((loc) => (
+            <button
+              key={loc.id}
+              onClick={() => setSelectedLocation(loc.id)}
+              className={`px-6 py-3.5 rounded-xl font-bold text-sm whitespace-nowrap transition-all flex items-center gap-2 shadow-sm
+                ${selectedLocation === loc.id 
+                  ? 'bg-gradient-to-r from-premium-gold to-yellow-600 text-white shadow-premium-gold/30' 
+                  : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-100 hover:border-premium-gold/30'}`}
+            >
+              {loc.location_name}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className={`grid grid-cols-1 ${enableTenantSubscription ? 'lg:grid-cols-2' : 'lg:grid-cols-1'} gap-8`}>

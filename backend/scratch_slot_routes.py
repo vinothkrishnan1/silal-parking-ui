@@ -1,4 +1,9 @@
-from flask import Blueprint, jsonify, request
+import re
+
+with open(r'g:\silal_market_pro_parking\backend\routes\slot_routes.py', 'r') as f:
+    content = f.read()
+
+new_content = """from flask import Blueprint, jsonify, request
 from models import Vehicle, Tenant, ParkingSettings, Location, db
 from datetime import datetime
 
@@ -120,3 +125,7 @@ def update_settings():
     except Exception as e:
         db.session.rollback()
         return jsonify({'status': 'error', 'message': str(e)}), 500
+"""
+
+with open(r'g:\silal_market_pro_parking\backend\routes\slot_routes.py', 'w') as f:
+    f.write(new_content)
