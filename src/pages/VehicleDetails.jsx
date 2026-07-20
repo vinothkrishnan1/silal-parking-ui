@@ -194,7 +194,7 @@ const VehicleDetails = () => {
   };
 
   const calculateParkingFee = (vehicle) => {
-    if (!vehicle || !vehicle.entryTime || vehicle.type === 'Staff') return '0.000';
+    if (!vehicle || !vehicle.entryTime || vehicle.type === 'Staff' || vehicle.paymentStatus === 'waived' || vehicle.hasActiveSubscription) return '0.000';
     const pricingTierData = mockTieredPricingData.find(p => p.isActive && p.name.includes('Standard Car Parking')) || mockTieredPricingData[0];
     if (!pricingTierData || !pricingTierData.tiers) return '0.000';
     const entryTime = new Date(vehicle.entryTime); const currentTime = new Date();
@@ -230,12 +230,13 @@ const VehicleDetails = () => {
     else if (type === 'waiver') setPaymentStep('waiverReasonInput');
   };
 
-  const handleProcessPayment = async () => {
+  const handleProcessPayment = async (overrideMethod) => {
     if (!scannedVehicleData) return;
     const exitTime = new Date().toISOString().slice(0, 16).replace('T', ' ');
+    const method = typeof overrideMethod === 'string' ? overrideMethod : paymentMethod;
     const paymentData = {
       exitTime: exitTime,
-      paymentMethod: paymentMethod,
+      paymentMethod: method,
       paymentAmount: scannedVehicleData.calculatedFee,
       paymentTime: new Date().toISOString(),
       waiverReason: null
@@ -248,7 +249,7 @@ const VehicleDetails = () => {
         body: JSON.stringify({
           license_plate: scannedVehicleData.vehicleNumber,
           payment_status: 'paid',
-          payment_mode: paymentMethod.toLowerCase()
+          payment_mode: method.toLowerCase()
         })
       });
     } catch (error) {
@@ -857,13 +858,28 @@ const VehicleDetails = () => {
                     <div className="absolute top-0 right-0 p-2 opacity-5">
                       <DollarSign size={80} className="text-premium-gold" />
                     </div>
-                    <span className="text-xs font-black text-gray-500 uppercase tracking-widest block mb-1">{t('vehicles.parkingFeeDue')}</span>
-                    <span className="text-4xl font-black text-gradient-gold drop-shadow-sm">{t('dashboard.omr')} {scannedVehicleData.calculatedFee}</span>
+                    {scannedVehicleData.paymentStatus === 'waived' ? (
+                      <>
+                        <span className="text-xs font-black text-green-500 uppercase tracking-widest block mb-1">{language === 'ar' ? 'اشتراك فعال' : 'Active Subscription'}</span>
+                        <span className="text-2xl font-black text-green-600 drop-shadow-sm">{language === 'ar' ? 'لا يوجد رسوم مطلوبة' : 'No Payment Required'}</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-xs font-black text-gray-500 uppercase tracking-widest block mb-1">{t('vehicles.parkingFeeDue')}</span>
+                        <span className="text-4xl font-black text-gradient-gold drop-shadow-sm">{t('dashboard.omr')} {scannedVehicleData.calculatedFee}</span>
+                      </>
+                    )}
                   </div> 
 
                   <div className="flex flex-col gap-3 pt-2"> 
-                    <button className="ripple-button w-full px-4 py-4 bg-gradient-to-r from-premium-black to-[#1a1a1a] text-white rounded-xl font-black text-lg hover:shadow-lg hover:shadow-black/20 active:scale-95 transition-all" onClick={() => handleSelectPaymentOrWaiver('payment')}>{t('vehicles.processPayment')}</button> 
-                    <button className="ripple-button w-full px-4 py-3 bg-white border border-gray-200 text-gray-700 rounded-xl font-bold hover:bg-gray-50 shadow-sm active:scale-95 transition-all" onClick={() => handleSelectPaymentOrWaiver('waiver')}>{t('vehicles.applyWaiver')}</button> 
+                    {scannedVehicleData.paymentStatus === 'waived' ? (
+                      <button className="ripple-button w-full px-4 py-4 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl font-black text-lg hover:shadow-lg hover:shadow-green-500/20 active:scale-95 transition-all" onClick={() => handleProcessPayment('Subscription')}>{language === 'ar' ? 'تسجيل الخروج' : 'Process Exit'}</button>
+                    ) : (
+                      <>
+                        <button className="ripple-button w-full px-4 py-4 bg-gradient-to-r from-premium-black to-[#1a1a1a] text-white rounded-xl font-black text-lg hover:shadow-lg hover:shadow-black/20 active:scale-95 transition-all" onClick={() => handleSelectPaymentOrWaiver('payment')}>{t('vehicles.processPayment')}</button> 
+                        <button className="ripple-button w-full px-4 py-3 bg-white border border-gray-200 text-gray-700 rounded-xl font-bold hover:bg-gray-50 shadow-sm active:scale-95 transition-all" onClick={() => handleSelectPaymentOrWaiver('waiver')}>{t('vehicles.applyWaiver')}</button> 
+                      </>
+                    )}
                   </div> 
                 </div>
               )}

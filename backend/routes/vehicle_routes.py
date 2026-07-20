@@ -24,10 +24,27 @@ def get_current_vehicles():
     """
     Returns a list of all vehicles currently in the parking area (status='in').
     """
+    from models import VisitorVehicle, VisitorSubscription, SUBSCRIPTION_STATUS_ACTIVE
+    from datetime import datetime
+    
     vehicles = Vehicle.query.filter_by(status='in').order_by(Vehicle.entry_time.desc()).all()
     
+    today = datetime.utcnow().date()
     result = []
     for v in vehicles:
+        has_active_sub = False
+        if v.vehicle_category == 'Visitor' or v.vehicle_category is None:
+            visitor_vehicle = VisitorVehicle.query.filter_by(license_plate=v.license_plate).first()
+            if visitor_vehicle:
+                active_sub = VisitorSubscription.query.filter(
+                    VisitorSubscription.visitor_id == visitor_vehicle.visitor_id,
+                    VisitorSubscription.status == SUBSCRIPTION_STATUS_ACTIVE,
+                    VisitorSubscription.start_date <= today,
+                    VisitorSubscription.end_date >= today
+                ).first()
+                if active_sub:
+                    has_active_sub = True
+                    
         result.append({
             'id': str(v.id),
             'license_plate': v.license_plate,
@@ -38,7 +55,8 @@ def get_current_vehicles():
             'plateImage': 'https://placehold.co/300x100/333/white?text=' + v.license_plate,
             'exitTime': None,
             'paymentProcessedTime': v.payment_processed_at.strftime('%Y-%m-%d %H:%M:%S') if v.payment_processed_at else None,
-            'paymentStatus': v.payment_status
+            'paymentStatus': 'waived' if has_active_sub else v.payment_status,
+            'hasActiveSubscription': has_active_sub
         })
     
     return jsonify(result), 200

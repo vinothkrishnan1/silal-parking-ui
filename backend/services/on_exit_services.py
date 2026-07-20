@@ -130,8 +130,15 @@ def update_payment_status():
         ).order_by(desc(Vehicle.entry_time)).first()
         
         if vehicle:
+            # Validate payment_mode against Enum ('cash', 'card')
+            valid_modes = ['cash', 'card']
+            
+            # If the mode is subscription or waiver, treat it as waived payment
+            if payment_mode and payment_mode.lower() in ['subscription', 'waiver']:
+                payment_status = 'waived'
+                
             vehicle.payment_status = payment_status
-            vehicle.payment_mode = payment_mode
+            vehicle.payment_mode = payment_mode if payment_mode and payment_mode.lower() in valid_modes else None
             vehicle.payment_processed_at = datetime.utcnow() if payment_status.lower() in ['paid', 'waived'] else None
             db.session.commit()
             logger.info(f"Payment status for {license_plate} updated to {payment_status}")
@@ -149,6 +156,17 @@ def update_payment_status():
             
             # If payment is successful, open the boom barrier and close out the vehicle row.
             if payment_status.lower() in ['paid', 'waived']:
+                # Update vehicle status to 'out' first so it exits correctly even if barrier fails
+                vehicle.status = 'out'
+                if not vehicle.exit_time:
+                    vehicle.exit_time = datetime.utcnow()
+                if not vehicle.duration and vehicle.entry_time and vehicle.exit_time:
+                    vehicle.duration = vehicle.exit_time - vehicle.entry_time
+                db.session.commit()
+                log_info(
+                    f"Payment exit state updated: plate={license_plate}, vehicle_id={getattr(vehicle, 'id', None)}, status={vehicle.status}, exit_time={vehicle.exit_time.isoformat() if vehicle.exit_time else None}"
+                )
+                
                 try:
                     log_info(
                         f"Payment barrier trigger start: plate={license_plate}, source_ip={source_ip}, gate_name={gate_name}, payment_status={payment_status}"
@@ -162,15 +180,6 @@ def update_payment_status():
                         f"ip_address={getattr(controller_device, 'ip_address', None)}, device_type={getattr(controller_device, 'device_type', None)}"
                     )
                     _open_barrier_with_log(controller_device, license_plate)
-                    vehicle.status = 'out'
-                    if not vehicle.exit_time:
-                        vehicle.exit_time = datetime.utcnow()
-                    if not vehicle.duration and vehicle.entry_time and vehicle.exit_time:
-                        vehicle.duration = vehicle.exit_time - vehicle.entry_time
-                    db.session.commit()
-                    log_info(
-                        f"Payment barrier exit state updated: plate={license_plate}, vehicle_id={getattr(vehicle, 'id', None)}, status={vehicle.status}, exit_time={vehicle.exit_time.isoformat() if vehicle.exit_time else None}"
-                    )
                     print(f"[BARRIER] Boom barrier opened for paid visitor: {license_plate}")
                     log_info(f"Boom barrier opened for paid visitor: Plate={license_plate}")
                 except Exception as e:
