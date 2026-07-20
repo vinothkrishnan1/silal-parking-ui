@@ -52,7 +52,7 @@ const createInitialFormData = () => {
     house_number: '',
     block: '',
     visitor_type: 'Visitor',
-    vehicles: [],
+    vehicles: [''],
     start_date: today,
     end_date: today,
     allocated_slots: 1,
@@ -287,6 +287,7 @@ const VisitorVehicles = () => {
       setFormData({
         ...createInitialFormData(),
         ...visitor,
+        vehicles: visitor.vehicles && visitor.vehicles.length > 0 ? visitor.vehicles : [''],
         phone_number: sanitizeDigits(visitor.phone_number || '', 8),
         house_number: visitor.house_number || '',
         block: visitor.block || '',

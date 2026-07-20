@@ -367,7 +367,40 @@ def handle_anpr_entry(vehicle_data):
             else:
                 logger.info(f"Tenant vehicle {license_plate} has no active subscription. Treating as Visitor.")
   
-    if not tenant_vehicle:
+    if not is_subscriber:
+        # Check Visitor Subscription
+        from models import VisitorVehicle, VisitorSubscription, Visitor
+        visitor_veh = VisitorVehicle.query.filter(
+            func.replace(func.lower(VisitorVehicle.license_plate), ' ', '') == license_plate.lower().replace(' ', '')
+        ).first()
+        
+        if visitor_veh:
+            visitor = Visitor.query.get(visitor_veh.visitor_id)
+            if visitor:
+                print(f"[DEBUG] Found visitor subscription holder: {visitor.visitor_name} for plate: {license_plate}")
+                active_vis_sub = VisitorSubscription.query.filter(
+                    VisitorSubscription.visitor_id == visitor.id,
+                    VisitorSubscription.status == SUBSCRIPTION_STATUS_ACTIVE,
+                    VisitorSubscription.start_date <= today,
+                    VisitorSubscription.end_date >= today
+                ).first()
+                
+                if active_vis_sub:
+                    # Check slot allocation: how many vehicles belonging to this visitor are currently inside
+                    visitor_plates = [v.license_plate for v in visitor.vehicles]
+                    current_parked_visitor_cars = Vehicle.query.filter(
+                        Vehicle.license_plate.in_(visitor_plates),
+                        Vehicle.status == 'in'
+                    ).count()
+                    
+                    if current_parked_visitor_cars < active_vis_sub.allocated_slots:
+                        is_subscriber = True
+                    else:
+                        logger.info(f"Visitor {visitor.visitor_name} reached slot limit ({current_parked_visitor_cars}/{active_vis_sub.allocated_slots}). Treating as normal Visitor.")
+                else:
+                    logger.info(f"Visitor vehicle {license_plate} has no active subscription. Treating as normal Visitor.")
+
+    if not is_subscriber:
         staff = WaivedUser.query.filter(WaivedUser.license_plate.ilike(f"%{license_plate}%")).first()
         if staff:
             is_valid = True
@@ -625,6 +658,42 @@ def handle_anpr_exit(vehicle_data):
                 else:
                     vehicle.payment_status = 'waived' # Ensure they are allowed out
                     log_info(f"Exit tenant approved via waiver: plate={license_plate}, gate_name={_resolve_gate_name_from_camera_data(vehicle_data)}")
+
+        else:
+            # Check for Visitor Subscription if not a tenant
+            from models import VisitorVehicle, VisitorSubscription, Visitor
+            visitor_veh = VisitorVehicle.query.filter(
+                func.replace(func.lower(VisitorVehicle.license_plate), ' ', '') == license_plate.lower().replace(' ', '')
+            ).first()
+
+            if visitor_veh and vehicle.payment_status == 'waived':
+                # If they were let in under subscription (payment_status='waived'), verify it hasn't expired
+                visitor = Visitor.query.get(visitor_veh.visitor_id)
+                if visitor:
+                    today = now.date()
+                    sync_expired_subscriptions(today)
+                    active_vis_sub = VisitorSubscription.query.filter(
+                        VisitorSubscription.visitor_id == visitor.id,
+                        VisitorSubscription.status == SUBSCRIPTION_STATUS_ACTIVE,
+                        VisitorSubscription.start_date <= today,
+                        VisitorSubscription.end_date >= today
+                    ).first()
+
+                    if not active_vis_sub:
+                        logger.warning(f"Visitor vehicle {license_plate} subscription expired. Exit intervention required.")
+                        log_info(
+                            f"Exit barrier skipped: visitor subscription expired for plate={license_plate}, "
+                            f"source_ip={vehicle_data.get('source_ip')}, gate_name={_resolve_gate_name_from_camera_data(vehicle_data)}"
+                        )
+                        kiosk_payload.update({
+                            "requires_payment": True,
+                            "message": "Visitor subscription expired. Intervention required"
+                        })
+                        send_data_to_website(kiosk_payload)
+                        return jsonify({"status": "unpaid", "message": "Visitor subscription expired. Intervention required", **payload}), 403
+                    else:
+                        vehicle.payment_status = 'waived'
+                        log_info(f"Exit visitor subscriber approved via waiver: plate={license_plate}")
 
         # Allow exit if payment is done, or if the payable amount is zero.
         if payable_amount is not None and payable_amount <= 0:

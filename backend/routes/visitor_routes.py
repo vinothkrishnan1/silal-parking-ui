@@ -246,6 +246,24 @@ def add_subscription():
             _recalculate_subscription_amount(new_sub)
             
         db.session.add(new_sub)
+        
+        # Save Vehicles
+        vehicles_list = data.get('vehicles')
+        if vehicles_list is not None and isinstance(vehicles_list, list):
+            VisitorVehicle.query.filter_by(visitor_id=visitor.id).delete()
+            for plate in vehicles_list:
+                plate = _normalize_text(plate)
+                if plate:
+                    # Basic cleanup - remove spaces for consistency
+                    plate = plate.upper()
+                    # We might want to check for global duplicates here, but for simplicity we rely on DB integrity
+                    try:
+                        new_veh = VisitorVehicle(visitor_id=visitor.id, license_plate=plate)
+                        db.session.add(new_veh)
+                    except IntegrityError:
+                        db.session.rollback()
+                        return jsonify({"error": f"Vehicle plate {plate} is already registered."}), 400
+                        
         db.session.commit()
         return jsonify(new_sub.to_dict()), 201
     except ValueError as e:
@@ -304,6 +322,22 @@ def update_subscription(id):
             sub.transaction_id = _normalize_text(data['transaction_id']) or None
         if 'payment_date' in data:
             sub.payment_date = _parse_subscription_date(data['payment_date'], 'Payment Date', default_today=True)
+            
+        # Update Vehicles
+        vehicles_list = data.get('vehicles')
+        if vehicles_list is not None and isinstance(vehicles_list, list):
+            VisitorVehicle.query.filter_by(visitor_id=sub.visitor_id).delete()
+            for plate in vehicles_list:
+                plate = _normalize_text(plate)
+                if plate:
+                    plate = plate.upper()
+                    try:
+                        new_veh = VisitorVehicle(visitor_id=sub.visitor_id, license_plate=plate)
+                        db.session.add(new_veh)
+                    except IntegrityError:
+                        db.session.rollback()
+                        return jsonify({"error": f"Vehicle plate {plate} is already registered."}), 400
+                        
         next_status = resolve_subscription_status_for_save(
             _resolve_requested_status(data, default=normalize_subscription_status(sub.status)),
             sub.start_date,
