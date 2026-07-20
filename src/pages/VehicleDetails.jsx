@@ -57,6 +57,12 @@ const VehicleDetails = () => {
     fetchLocations();
   }, []);
 
+  useEffect(() => {
+    if (locations && locations.length > 0 && !addFormState.location_id) {
+      setAddFormState(prev => ({ ...prev, location_id: locations[0].id.toString() }));
+    }
+  }, [locations]);
+
   const fetchSlotData = async () => {
     try {
       const url = selectedLocation === 'all' 
@@ -775,6 +781,7 @@ const VehicleDetails = () => {
                     className={`w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-premium-gold/50 bg-white font-bold cursor-pointer ${language === 'ar' ? 'text-right' : 'text-left'}`} 
                     value={addFormState.location_id} 
                     onChange={(e) => setAddFormState({ ...addFormState, location_id: e.target.value })}
+                    required
                   >
                     <option value="">{t('common.all') === 'common.all' ? 'Select Location' : 'Select Location'}</option>
                     {locations.map(loc => (
