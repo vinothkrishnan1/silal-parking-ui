@@ -391,6 +391,7 @@
                            "to":  "إلى",
                            "serialNumber":  "م.",
                            "vehicleNumber":  "رقم المركبة",
+                           "location": "الموقع",
                            "entryTime":  "وقت الدخول",
                            "exitTime":  "وقت الخروج",
                            "paymentAmount":  "المبلغ (ر.ع.)",

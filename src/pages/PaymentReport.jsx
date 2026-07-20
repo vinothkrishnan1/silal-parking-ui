@@ -139,12 +139,12 @@ const PaymentReport = () => {
     let content = "";
     let filename = `payment_report_${new Date().toISOString().slice(0, 10)}`;
     let mimeType = "";
-    const header = `${t('paymentReports.serialNumber')},${t('paymentReports.vehicleNumber')},${t('paymentReports.entryTime')},${t('paymentReports.exitTime')},${t('paymentReports.duration')},${t('paymentReports.paymentAmount')},${t('paymentReports.paymentStatus')},${t('paymentReports.paymentMode')},${t('paymentReports.collectedBy')}\n`;
+    const header = `${t('paymentReports.serialNumber')},${t('paymentReports.vehicleNumber')},${t('paymentReports.entryTime')},${t('paymentReports.exitTime')},${t('paymentReports.paymentAmount')},${t('paymentReports.paymentStatus')},${t('paymentReports.paymentMode')},${t('paymentReports.collectedBy')},${t('paymentReports.duration')},${t('paymentReports.location')}\n`;
     const dataToExport = filteredData.map((v, index) => {
       const duration = v.exitTime
         ? (v.duration || computeDuration(v.entryTime, v.exitTime, t))
         : computeDuration(v.entryTime, null, t);
-      return [index + 1, v.vehicleNumber, v.entryTime, v.exitTime || '-', duration, v.paymentAmount, v.paymentStatus, v.paymentMode, v.collectedBy];
+      return [index + 1, v.vehicleNumber, v.entryTime, v.exitTime || '-', v.paymentAmount, v.paymentStatus, v.paymentMode, v.collectedBy, duration, v.location || '-'];
     });
 
     if (format === 'pdf') {
@@ -286,6 +286,12 @@ const PaymentReport = () => {
                   </th>
                 ))}
                 <th scope="col" className={`px-6 py-5 text-[11px] font-black text-gray-400 uppercase tracking-widest ${language === 'ar' ? 'text-right' : 'text-left'}`}>{t('paymentReports.duration')}</th>
+                <th scope="col" className={`px-6 py-5 text-[11px] font-black text-gray-400 uppercase tracking-widest cursor-pointer hover:text-premium-gold transition-colors ${language === 'ar' ? 'text-right' : 'text-left'}`} onClick={() => handleSort('location')}>
+                  <div className={`flex items-center ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
+                    {t('paymentReports.location')}
+                    {sortField === 'location' && <span className={`${language === 'ar' ? 'mr-1' : 'ml-1'} text-premium-gold`}><ArrowUp size={14} className={sortDirection === 'desc' ? 'rotate-180 transition-transform' : 'transition-transform'} /></span>}
+                  </div>
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-50">
@@ -304,6 +310,7 @@ const PaymentReport = () => {
                     <td className={`px-6 py-5 whitespace-nowrap ${language === 'ar' ? 'text-right' : ''}`}>{getPaymentModeBadge(v.paymentMode)}</td>
                     <td className={`px-6 py-5 whitespace-nowrap text-sm font-bold text-gray-600 ${language === 'ar' ? 'text-right' : ''}`}>{v.collectedBy}</td>
                     <td className={`px-6 py-5 whitespace-nowrap text-sm font-black text-gray-700 ${language === 'ar' ? 'text-right' : ''}`}>{duration}</td>
+                    <td className={`px-6 py-5 whitespace-nowrap text-sm font-bold text-gray-600 ${language === 'ar' ? 'text-right' : ''}`}>{v.location || '-'}</td>
                   </tr>
                 )
               })}

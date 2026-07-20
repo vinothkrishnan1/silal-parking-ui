@@ -68,6 +68,7 @@ class Vehicle(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     license_plate = db.Column(db.String(20), nullable=False)
     location_id = db.Column(db.Integer, db.ForeignKey('locations.id', ondelete="SET NULL"), nullable=True)
+    location = db.relationship('Location', backref='vehicles', lazy=True)
     # vehicle_type = db.Column(db.String(50))
     
     # Audit fields

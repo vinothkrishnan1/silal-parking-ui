@@ -297,7 +297,8 @@ def get_reports():
                     'paymentAmount': f"{v.payable_amount:.3f}" if v.payable_amount is not None else "0.000",
                     'paymentStatus': v.payment_status.capitalize() if v.payment_status else 'Pending',
                     'collectedBy': v.verifier.username if v.verifier else ('System' if v.payment_status == 'paid' else '-'),
-                    'paymentType': 'visitor'
+                    'paymentType': 'visitor',
+                    'location': v.location.location_name if v.location else '-'
                 })
         
         # 2. Fetch Tenant Subscription Reports (Tenant Payments) if payment_type is 'all' or 'tenant'
@@ -344,7 +345,8 @@ def get_reports():
                     'paymentAmount': f"{s.amount_paid:.3f}" if s.amount_paid is not None else "0.000",
                     'paymentStatus': s.payment_status.capitalize() if s.payment_status else 'Paid',
                     'collectedBy': 'System',
-                    'paymentType': 'tenant'
+                    'paymentType': 'tenant',
+                    'location': '-'
                 })
                 
         # Sort merged list by entryTime desc

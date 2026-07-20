@@ -391,6 +391,7 @@
                            "to":  "to",
                            "serialNumber":  "S.No",
                            "vehicleNumber":  "Vehicle Number",
+                           "location": "Location",
                            "entryTime":  "Entry Time",
                            "exitTime":  "Exit Time",
                            "paymentAmount":  "Amount Paid (OMR)",
