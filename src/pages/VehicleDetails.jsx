@@ -33,11 +33,14 @@ const VehicleDetails = () => {
   const [paymentMethod, setPaymentMethod] = useState('Cash');
   const [paymentStep, setPaymentStep] = useState('initial');
   const [waiverRemarks, setWaiverRemarks] = useState('');
-  const [addFormState, setAddFormState] = useState({ vehicleNumber: '', entryTime: '', type: 'Visitor', plateImage: 'https://placehold.co/300x100/333/white?text=NEW+PLATE' });
+  const [addFormState, setAddFormState] = useState({ vehicleNumber: '', entryTime: '', type: 'Visitor', location_id: '', plateImage: 'https://placehold.co/300x100/333/white?text=NEW+PLATE' });
   const [slotData, setSlotData] = useState(null);
   const [tick, setTick] = useState(0);
   const [locations, setLocations] = useState([]);
   const [selectedLocation, setSelectedLocation] = useState('all');
+  const [showExitVehicleModal, setShowExitVehicleModal] = useState(false);
+  const [exitVehicleNumber, setExitVehicleNumber] = useState('');
+  const [exitVehicleError, setExitVehicleError] = useState('');
 
   useEffect(() => {
     const fetchLocations = async () => {
@@ -132,9 +135,40 @@ const VehicleDetails = () => {
       vehicleNumber: '',
       entryTime: new Date().toISOString().slice(0, 16).replace('T', ' '),
       type: 'Visitor',
+      location_id: locations.length > 0 ? locations[0].id.toString() : '',
       plateImage: 'https://placehold.co/300x100/333/white?text=NEW+PLATE'
     });
     setShowAddFormModal(true);
+  };
+
+  const handleOpenExitVehicleModal = () => {
+    setExitVehicleNumber('');
+    setExitVehicleError('');
+    setShowExitVehicleModal(true);
+  };
+
+  const handleVerifyExitVehicle = () => {
+    if (!exitVehicleNumber.trim()) {
+      setExitVehicleError(t('common.error') || 'Please enter a vehicle number');
+      return;
+    }
+    
+    const insideVehicles = vehiclesData.filter(v => !v.exitTime);
+    const matchedVehicle = insideVehicles.find(v => v.vehicleNumber.toLowerCase() === exitVehicleNumber.trim().toLowerCase());
+    
+    if (matchedVehicle) {
+      setExitVehicleError('');
+      setShowExitVehicleModal(false);
+      setShowScanModal(true);
+      setPaymentStep('methodOrWaiverSelection');
+      setScannedVehicleData({
+        ...matchedVehicle,
+        calculatedFee: calculateParkingFee(matchedVehicle),
+        paymentTime: new Date().toISOString()
+      });
+    } else {
+      setExitVehicleError(t('vehicles.noVehiclesFound'));
+    }
   };
 
   const handleScanTicket = () => {
@@ -257,17 +291,38 @@ const VehicleDetails = () => {
     processVehicleExitAndUpdateGlobal(scannedVehicleData.id, waiverData);
   };
 
-  const handleAddNewVehicleSubmit = (e) => {
+  const handleAddNewVehicleSubmit = async (e) => {
     e.preventDefault();
-    const newVehicleEntry = {
-      id: Date.now().toString(),
-      ...addFormState,
-      vehicleImage: 'https://placehold.co/400x300/333/white?text=Vehicle+Image',
-      exitTime: null,
-      paymentProcessedTime: null
-    };
-    updateVehiclesData([...vehiclesData, newVehicleEntry]);
-    setShowAddFormModal(false);
+    try {
+      const response = await fetch(apiUrl('/api/vehicles/add'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vehicleNumber: addFormState.vehicleNumber,
+          type: addFormState.type,
+          location_id: addFormState.location_id
+        })
+      });
+      
+      const data = await response.json();
+      if (response.ok) {
+        const newVehicleEntry = {
+          id: data.id ? data.id.toString() : Date.now().toString(),
+          ...addFormState,
+          vehicleImage: 'https://placehold.co/400x300/333/white?text=Vehicle+Image',
+          exitTime: null,
+          paymentProcessedTime: null,
+          entryTime: new Date().toISOString()
+        };
+        updateVehiclesData([...vehiclesData, newVehicleEntry]);
+        setShowAddFormModal(false);
+      } else {
+        alert(data.message || 'Failed to add vehicle');
+      }
+    } catch (error) {
+      console.error('Error adding vehicle:', error);
+      alert('Failed to connect to backend.');
+    }
   };
 
   const handlePrintReceipt = () => {
@@ -373,6 +428,10 @@ const VehicleDetails = () => {
           <button className="ripple-button px-5 py-2.5 bg-gradient-to-r from-red-600 to-red-500 text-white rounded-xl hover:shadow-lg hover:shadow-red-200 flex items-center transition-all active:scale-95 focus:outline-none group font-bold" onClick={handleScanTicket}>
             <QrCode size={18} className={`transition-transform duration-300 group-hover:scale-110 ${language === 'ar' ? 'ml-2' : 'mr-2'}`} />
             <span className="text-sm">{t('vehicles.scanTicket')}</span>
+          </button>
+          <button className="ripple-button px-5 py-2.5 bg-gradient-to-r from-orange-500 to-orange-400 text-white rounded-xl hover:shadow-lg hover:shadow-orange-200 flex items-center transition-all active:scale-95 focus:outline-none group font-bold" onClick={handleOpenExitVehicleModal}>
+            <Car size={18} className={`transition-transform duration-300 group-hover:translate-x-1 ${language === 'ar' ? 'ml-2' : 'mr-2'}`} />
+            <span className="text-sm">{t('vehicles.processExit') || 'Exit Vehicle'}</span>
           </button>
           <button className="ripple-button px-5 py-2.5 bg-gradient-to-r from-premium-black to-[#1a1a1a] text-white rounded-xl hover:shadow-lg hover:shadow-black/20 flex items-center transition-all active:scale-95 focus:outline-none group font-bold" onClick={handleOpenAddVehicleForm}>
             <Plus size={18} className={`transition-transform duration-300 group-hover:rotate-90 ${language === 'ar' ? 'ml-2 text-premium-gold' : 'mr-2 text-premium-gold'}`} />
@@ -709,6 +768,19 @@ const VehicleDetails = () => {
                     <option value="Staff">{t('dashboard.staff')}</option>
                   </select>
                 </div>
+                <div>
+                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">{t('common.location') === 'common.location' ? 'Location' : (t('common.location') || 'Location')}</label>
+                  <select 
+                    className={`w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-premium-gold/50 bg-white font-bold cursor-pointer ${language === 'ar' ? 'text-right' : 'text-left'}`} 
+                    value={addFormState.location_id} 
+                    onChange={(e) => setAddFormState({ ...addFormState, location_id: e.target.value })}
+                  >
+                    <option value="">{t('common.all') === 'common.all' ? 'Select Location' : 'Select Location'}</option>
+                    {locations.map(loc => (
+                      <option key={loc.id} value={loc.id}>{loc.location_name}</option>
+                    ))}
+                  </select>
+                </div>
                 <div className="bg-premium-gold/5 p-4 rounded-xl border border-premium-gold/20 shadow-sm">
                   <label className="block text-[10px] font-black text-premium-gold uppercase tracking-widest mb-1">{t('vehicles.entryTime')}</label>
                   <div className={`flex items-center gap-2 font-mono font-bold text-gray-700 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
@@ -914,6 +986,40 @@ const VehicleDetails = () => {
                   </div> 
                 </div>
               )}
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {showExitVehicleModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 no-print backdrop-blur-sm">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-2xl w-full max-w-md p-0 overflow-hidden shadow-2xl"
+          >
+            <div className={`p-6 border-b flex justify-between items-center ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
+              <h3 className="text-xl font-bold text-gray-800">{t('vehicles.processExit') || 'Exit Vehicle'}</h3>
+              <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors" onClick={() => setShowExitVehicleModal(false)}><X size={20} /></button>
+            </div>
+            <div className="p-6">
+              <div className="space-y-5">
+                <div>
+                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">{t('vehicles.vehicleNumber')}</label>
+                  <input 
+                    type="text" 
+                    className={`w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-blue bg-gray-50 focus:bg-white transition-all font-bold ${language === 'ar' ? 'text-right' : 'text-left'}`} 
+                    value={exitVehicleNumber} 
+                    onChange={(e) => setExitVehicleNumber(e.target.value)} 
+                    placeholder="Enter Vehicle Number (e.g. ABC 1234)" 
+                  />
+                  {exitVehicleError && <p className="text-red-500 text-xs mt-2 font-bold">{exitVehicleError}</p>}
+                </div>
+              </div>
+              <div className={`mt-8 flex gap-3 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
+                <button type="button" className="ripple-button flex-1 px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-600 font-bold hover:bg-gray-50 transition-all shadow-sm" onClick={() => setShowExitVehicleModal(false)}>{t('common.cancel')}</button>
+                <button type="button" className="ripple-button flex-1 px-4 py-3 bg-gradient-to-r from-orange-500 to-orange-400 text-white rounded-xl font-bold hover:shadow-lg hover:shadow-orange-200 active:scale-95 transition-all" onClick={handleVerifyExitVehicle}>{t('common.continue') || 'Verify'}</button>
+              </div>
             </div>
           </motion.div>
         </div>

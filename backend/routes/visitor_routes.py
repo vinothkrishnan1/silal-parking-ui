@@ -260,12 +260,19 @@ def update_subscription(id):
     sub = VisitorSubscription.query.get_or_404(id)
     data = request.json or {}
     try:
-        if 'visitor_id' in data:
+        if data.get('visitor_id'):
             visitor_id = int(data['visitor_id'])
             visitor = Visitor.query.get(visitor_id)
             if not visitor:
                 return jsonify({"error": "Selected visitor was not found."}), 404
             sub.visitor_id = visitor_id
+        elif sub.visitor_id and (data.get('visitor_name') or data.get('phone_number')):
+            visitor = Visitor.query.get(sub.visitor_id)
+            if visitor:
+                if data.get('visitor_name'):
+                    visitor.visitor_name = _normalize_text(data['visitor_name'])
+                if data.get('phone_number'):
+                    visitor.phone_number = _normalize_text(data['phone_number'])
 
         if 'start_date' in data:
             sub.start_date = _parse_subscription_date(data['start_date'], 'Start Date')

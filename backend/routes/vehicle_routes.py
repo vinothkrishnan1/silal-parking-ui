@@ -42,6 +42,45 @@ def get_current_vehicles():
         })
     
     return jsonify(result), 200
+    
+@vehicle_bp.route('/add', methods=['POST'])
+def add_vehicle():
+    try:
+        from flask import request
+        from datetime import datetime
+        data = request.get_json()
+        
+        license_plate = data.get('vehicleNumber')
+        vehicle_category = data.get('type', 'Visitor')
+        location_id = data.get('location_id')
+        
+        if not license_plate:
+            return jsonify({"status": "error", "message": "Vehicle number is required"}), 400
+            
+        # Check if already inside
+        existing = Vehicle.query.filter_by(license_plate=license_plate, status='in').first()
+        if existing:
+            return jsonify({"status": "error", "message": "Vehicle is already inside"}), 400
+            
+        new_vehicle = Vehicle(
+            license_plate=license_plate,
+            vehicle_category=vehicle_category,
+            location_id=location_id if location_id and location_id != 'all' else None,
+            status='in',
+            entry_time=datetime.utcnow()
+        )
+        
+        db.session.add(new_vehicle)
+        db.session.commit()
+        
+        from services.parking_broadcast import broadcast_slot_status
+        broadcast_slot_status()
+        
+        return jsonify({"status": "success", "message": "Vehicle added successfully", "id": new_vehicle.id}), 201
+    except Exception as e:
+        import traceback
+        print(traceback.format_exc())
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 @vehicle_bp.route('/dashboard', methods=['GET'])
 def get_dashboard_data():

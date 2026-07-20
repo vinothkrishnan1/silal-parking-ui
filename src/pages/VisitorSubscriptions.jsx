@@ -310,8 +310,8 @@ const VisitorVehicles = () => {
   };
 
   const validateForm = () => {
-    if (!formData.visitor_id) {
-      setFormError(t('visitorSubscriptions.validation.selectVisitor'));
+    if (!formData.visitor_name?.trim() || !formData.phone_number?.trim()) {
+      setFormError(language === 'ar' ? 'يرجى إدخال اسم الزائر ورقم الهاتف' : 'Please enter Visitor Name and Phone Number');
       return false;
     }
 
@@ -676,56 +676,32 @@ const VisitorVehicles = () => {
               )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                {formData.visitor_name && !showDropdown ? (
-                  <div className={`sm:col-span-2 p-4 bg-gray-50 border border-gray-200 rounded-2xl flex items-center justify-between group transition-all hover:bg-gray-100/40 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
-                    <div className={`flex items-center ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
-                      <div className={`h-12 w-12 rounded-xl bg-[#c6a87c]/15 text-[#c6a87c] flex items-center justify-center font-bold text-lg ${language === 'ar' ? 'ml-4' : 'mr-4'} shadow-sm`}>
-                        {formData.visitor_name?.charAt(0).toUpperCase()}
-                      </div>
-                      <div className={language === 'ar' ? 'text-right' : ''}>
-                        <h4 className="font-bold text-gray-900">{formData.visitor_name}</h4>
-                        <p className="text-sm text-gray-600 font-bold">{formData.phone_number}</p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setVisitorSearch('');
-                        setShowDropdown(true);
+                <div className="sm:col-span-2 space-y-4">
+                  <div>
+                    <label className={`block text-sm font-semibold text-gray-700 mb-1.5 ${language === 'ar' ? 'text-right' : ''}`}>{language === 'ar' ? 'اسم الزائر' : 'Visitor Name'}</label>
+                    <input
+                      type="text"
+                      placeholder="Visitor Name"
+                      value={formData.visitor_name || ''}
+                      onChange={(event) => {
+                        setFormData({ ...formData, visitor_name: event.target.value });
                       }}
-                      className="px-3.5 py-2 text-xs font-bold text-[#c6a87c] bg-white border border-[#c6a87c]/20 rounded-xl hover:bg-[#c6a87c] hover:text-[#121212] transition-all shadow-sm focus:outline-none"
-                    >
-                      {t('visitorSubscriptions.changeVisitor')}
-                    </button>
+                      className={`block w-full py-3 bg-gray-50/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-[#121212] focus:border-[#121212] focus:bg-white transition-all text-sm font-medium text-gray-900 shadow-sm px-4 ${language === 'ar' ? 'text-right' : 'text-left'}`}
+                    />
                   </div>
-                ) : (
-                  <div className="sm:col-span-2 space-y-4">
-                    <div>
-                      <label className={`block text-sm font-semibold text-gray-700 mb-1.5 ${language === 'ar' ? 'text-right' : ''}`}>{t('visitorSubscriptions.selectVisitor')} Name</label>
-                      <input
-                        type="text"
-                        placeholder="Visitor Name"
-                        value={formData.visitor_name || ''}
-                        onChange={(event) => {
-                          setFormData({ ...formData, visitor_name: event.target.value, visitor_id: null });
-                        }}
-                        className={`block w-full py-3 bg-gray-50/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-[#121212] focus:border-[#121212] focus:bg-white transition-all text-sm font-medium text-gray-900 shadow-sm px-4 ${language === 'ar' ? 'text-right' : 'text-left'}`}
-                      />
-                    </div>
-                    <div>
-                      <label className={`block text-sm font-semibold text-gray-700 mb-1.5 ${language === 'ar' ? 'text-right' : ''}`}>Phone Number</label>
-                      <input
-                        type="text"
-                        placeholder="Phone Number"
-                        value={formData.phone_number || ''}
-                        onChange={(event) => {
-                          setFormData({ ...formData, phone_number: event.target.value, visitor_id: null });
-                        }}
-                        className={`block w-full py-3 bg-gray-50/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-[#121212] focus:border-[#121212] focus:bg-white transition-all text-sm font-medium text-gray-900 shadow-sm px-4 ${language === 'ar' ? 'text-right' : 'text-left'}`}
-                      />
-                    </div>
+                  <div>
+                    <label className={`block text-sm font-semibold text-gray-700 mb-1.5 ${language === 'ar' ? 'text-right' : ''}`}>Phone Number</label>
+                    <input
+                      type="text"
+                      placeholder="Phone Number"
+                      value={formData.phone_number || ''}
+                      onChange={(event) => {
+                        setFormData({ ...formData, phone_number: event.target.value });
+                      }}
+                      className={`block w-full py-3 bg-gray-50/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-[#121212] focus:border-[#121212] focus:bg-white transition-all text-sm font-medium text-gray-900 shadow-sm px-4 ${language === 'ar' ? 'text-right' : 'text-left'}`}
+                    />
                   </div>
-                )}
+                </div>
 
                 <div className="sm:col-span-2 border-t border-gray-100 pt-5 mt-2">
                   <div className="flex justify-between items-center mb-3">
