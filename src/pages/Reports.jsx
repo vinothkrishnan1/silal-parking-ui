@@ -120,7 +120,7 @@ const Reports = () => {
       const status = vehicle.exitTime ? 'Exited' : 'Inside';
       const paymentMethod = vehicle.exitTime ? (vehicle.paymentMethod || 'N/A') : '-';
       const paymentAmount = vehicle.exitTime ? (vehicle.type === 'Staff' ? 'N/A' : (vehicle.paymentAmount || '0.000')) : '-';
-      const locationName = locations.find(loc => loc.id.toString() === vehicle.location_id?.toString())?.location_name || '-';
+      const locationName = vehicle.location || '-';
 
       return [
         vehicle.vehicleNumber,
@@ -270,14 +270,14 @@ const Reports = () => {
           <table className="min-w-full divide-y divide-gray-100">
             <thead className="bg-gray-50/80">
               <tr className={language === 'ar' ? 'flex-row-reverse' : ''}>
-                {['vehicleNumber', 'entryTime', 'exitTime', 'type', 'location_id'].map(field => (
+                {['vehicleNumber', 'entryTime', 'exitTime', 'type', 'location'].map(field => (
                   <th key={field} scope="col" className={`px-6 py-5 ${language === 'ar' ? 'text-right' : 'text-left'} text-[11px] font-black text-gray-400 uppercase tracking-widest cursor-pointer hover:text-premium-gold transition-colors`} onClick={() => handleSort(field)}>
                     <div className={`flex items-center ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
                       {field === 'vehicleNumber' ? t('vehicles.vehicleNumber') :
                         field === 'entryTime' ? t('vehicles.entryTime') :
                           field === 'exitTime' ? t('vehicles.exitTime') :
                             field === 'type' ? t('vehicles.type') : 
-                              field === 'location_id' ? (t('common.location') === 'common.location' ? 'Location' : (t('common.location') || 'Location')) : field}
+                              field === 'location' ? (t('common.location') === 'common.location' ? 'Location' : (t('common.location') || 'Location')) : field}
                       {sortField === field && <span className={`${language === 'ar' ? 'mr-1' : 'ml-1'} text-premium-gold`}><ArrowUp size={14} className={sortDirection === 'desc' ? 'rotate-180 transition-transform' : 'transition-transform'} /></span>}
                     </div>
                   </th>
@@ -308,7 +308,7 @@ const Reports = () => {
                     <td className={`px-6 py-5 whitespace-nowrap ${language === 'ar' ? 'text-right' : ''}`}>
                       <div className={`flex items-center gap-2 text-sm font-bold text-gray-700 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
                         <MapPin size={15} className="text-gray-400 group-hover:text-premium-gold transition-colors" />
-                        <span>{locations.find(loc => loc.id.toString() === vehicle.location_id?.toString())?.location_name || '-'}</span>
+                        <span>{vehicle.location || '-'}</span>
                       </div>
                     </td>
                     <td className={`px-6 py-5 whitespace-nowrap ${language === 'ar' ? 'text-right' : ''}`}>{getStatusBadge(vehicle.exitTime)}</td>
