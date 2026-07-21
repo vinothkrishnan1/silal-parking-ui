@@ -118,6 +118,7 @@ def update_payment_status():
     license_plate = data.get('license_plate')
     payment_status = data.get('payment_status')
     payment_mode = data.get('payment_mode')
+    payable_amount = data.get('payable_amount')
     gate_name = data.get('gate_name') or get_last_exit_gate_name()
     source_ip = data.get('source_ip') or data.get('ip_address') or data.get('client_ip') or data.get('remote_addr') or get_last_exit_source_ip()
 
@@ -140,6 +141,13 @@ def update_payment_status():
             vehicle.payment_status = payment_status
             vehicle.payment_mode = payment_mode if payment_mode and payment_mode.lower() in valid_modes else None
             vehicle.payment_processed_at = datetime.utcnow() if payment_status.lower() in ['paid', 'waived'] else None
+            
+            if payable_amount is not None:
+                try:
+                    vehicle.payable_amount = float(payable_amount)
+                except ValueError:
+                    pass
+
             db.session.commit()
             logger.info(f"Payment status for {license_plate} updated to {payment_status}")
 

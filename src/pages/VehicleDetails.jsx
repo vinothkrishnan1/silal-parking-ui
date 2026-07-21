@@ -255,7 +255,8 @@ const VehicleDetails = () => {
         body: JSON.stringify({
           license_plate: scannedVehicleData.vehicleNumber,
           payment_status: 'paid',
-          payment_mode: method.toLowerCase()
+          payment_mode: method.toLowerCase(),
+          payable_amount: scannedVehicleData.calculatedFee
         })
       });
     } catch (error) {
@@ -287,7 +288,8 @@ const VehicleDetails = () => {
         body: JSON.stringify({
           license_plate: scannedVehicleData.vehicleNumber,
           payment_status: 'waived',
-          payment_mode: 'waiver'
+          payment_mode: 'waiver',
+          payable_amount: 0
         })
       });
     } catch (error) {
