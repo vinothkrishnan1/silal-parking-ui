@@ -249,18 +249,36 @@ const VehicleDetails = () => {
     };
 
     try {
-      await fetch(apiUrl('/payment_status'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          license_plate: scannedVehicleData.vehicleNumber,
-          payment_status: 'paid',
-          payment_mode: method.toLowerCase(),
-          payable_amount: scannedVehicleData.calculatedFee
-        })
-      });
+      if (method.toLowerCase() === 'card') {
+        const response = await fetch(apiUrl('/api/payment/process'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            license_plate: scannedVehicleData.vehicleNumber,
+            amount: scannedVehicleData.calculatedFee
+          })
+        });
+        const data = await response.json();
+        if (!response.ok || data.status !== 'success') {
+          alert(`Card payment failed: ${data.message || 'Unknown error'}`);
+          return; // Stop if payment fails
+        }
+      } else {
+        await fetch(apiUrl('/payment_status'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            license_plate: scannedVehicleData.vehicleNumber,
+            payment_status: 'paid',
+            payment_mode: method.toLowerCase(),
+            payable_amount: scannedVehicleData.calculatedFee
+          })
+        });
+      }
     } catch (error) {
       console.error("Failed to notify backend of payment:", error);
+      alert("Payment processing encountered an error.");
+      return;
     }
 
     setScannedVehicleData(prev => ({ ...prev, ...paymentData }));
