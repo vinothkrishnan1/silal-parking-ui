@@ -211,16 +211,23 @@ def add_subscription():
         requested_status = _resolve_requested_status(data, default=SUBSCRIPTION_STATUS_ACTIVE)
         final_status = resolve_subscription_status_for_save(requested_status, start_date, end_date, default=requested_status)
 
-        # check duplicate visitor subscription
-        visitor_sub = VisitorSubscription.query.filter(
-            VisitorSubscription.visitor_id == visitor.id,
-            VisitorSubscription.start_date <= end_date,
-            VisitorSubscription.end_date >= start_date,
-            VisitorSubscription.status == SUBSCRIPTION_STATUS_ACTIVE
-        ).first()
-        
-        if visitor_sub and final_status == SUBSCRIPTION_STATUS_ACTIVE:
-            return jsonify({"error": "Duplicate visitor subscription"}), 400
+        # check duplicate vehicle subscription overlap
+        vehicles_list = data.get('vehicles')
+        if vehicles_list is not None and isinstance(vehicles_list, list) and final_status == SUBSCRIPTION_STATUS_ACTIVE:
+            for plate in vehicles_list:
+                plate = _normalize_text(plate).upper()
+                if not plate: continue
+                overlap = db.session.query(VisitorSubscription)\
+                    .join(Visitor, VisitorSubscription.visitor_id == Visitor.id)\
+                    .join(VisitorVehicle, Visitor.id == VisitorVehicle.visitor_id)\
+                    .filter(
+                        VisitorVehicle.license_plate == plate,
+                        VisitorSubscription.status == SUBSCRIPTION_STATUS_ACTIVE,
+                        VisitorSubscription.start_date <= end_date,
+                        VisitorSubscription.end_date >= start_date
+                    ).first()
+                if overlap:
+                    return jsonify({"error": f"Vehicle plate {plate} already has an overlapping active subscription from {overlap.start_date} to {overlap.end_date}."}), 400
 
 
         new_sub = VisitorSubscription(
@@ -256,13 +263,8 @@ def add_subscription():
                 if plate:
                     # Basic cleanup - remove spaces for consistency
                     plate = plate.upper()
-                    # We might want to check for global duplicates here, but for simplicity we rely on DB integrity
-                    try:
-                        new_veh = VisitorVehicle(visitor_id=visitor.id, license_plate=plate)
-                        db.session.add(new_veh)
-                    except IntegrityError:
-                        db.session.rollback()
-                        return jsonify({"error": f"Vehicle plate {plate} is already registered."}), 400
+                    new_veh = VisitorVehicle(visitor_id=visitor.id, license_plate=plate)
+                    db.session.add(new_veh)
                         
         db.session.commit()
         return jsonify(new_sub.to_dict()), 201
@@ -331,12 +333,9 @@ def update_subscription(id):
                 plate = _normalize_text(plate)
                 if plate:
                     plate = plate.upper()
-                    try:
-                        new_veh = VisitorVehicle(visitor_id=sub.visitor_id, license_plate=plate)
-                        db.session.add(new_veh)
-                    except IntegrityError:
-                        db.session.rollback()
-                        return jsonify({"error": f"Vehicle plate {plate} is already registered."}), 400
+                    new_veh = VisitorVehicle(visitor_id=sub.visitor_id, license_plate=plate)
+                    db.session.add(new_veh)
+        db.session.flush()
                         
         next_status = resolve_subscription_status_for_save(
             _resolve_requested_status(data, default=normalize_subscription_status(sub.status)),
@@ -344,19 +343,23 @@ def update_subscription(id):
             sub.end_date,
             default=normalize_subscription_status(sub.status)
         )
-        overlapping_subscription = None
         if next_status == SUBSCRIPTION_STATUS_ACTIVE:
-            overlapping_subscription = VisitorSubscription.query.filter(
-                VisitorSubscription.id != sub.id,
-                VisitorSubscription.visitor_id == sub.visitor_id,
-                VisitorSubscription.start_date <= sub.end_date,
-                VisitorSubscription.end_date >= sub.start_date,
-                VisitorSubscription.status == SUBSCRIPTION_STATUS_ACTIVE
-            ).first()
-
-        if overlapping_subscription:
-            return jsonify({"error": "Duplicate visitor subscription"}), 400
-
+            # Check overlap for the visitor's vehicles
+            current_vehicles = VisitorVehicle.query.filter_by(visitor_id=sub.visitor_id).all()
+            for veh in current_vehicles:
+                overlap = db.session.query(VisitorSubscription)\
+                    .join(Visitor, VisitorSubscription.visitor_id == Visitor.id)\
+                    .join(VisitorVehicle, Visitor.id == VisitorVehicle.visitor_id)\
+                    .filter(
+                        VisitorSubscription.id != sub.id,
+                        VisitorVehicle.license_plate == veh.license_plate,
+                        VisitorSubscription.status == SUBSCRIPTION_STATUS_ACTIVE,
+                        VisitorSubscription.start_date <= sub.end_date,
+                        VisitorSubscription.end_date >= sub.start_date
+                    ).first()
+                if overlap:
+                    return jsonify({"error": f"Vehicle plate {veh.license_plate} already has an overlapping active subscription from {overlap.start_date} to {overlap.end_date}."}), 400
+        
         sub.status = next_status
         
         db.session.commit()

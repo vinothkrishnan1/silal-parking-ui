@@ -291,7 +291,7 @@ class TenantVehicle(db.Model):
     __tablename__ = 'tenant_vehicles'
     id = db.Column(db.Integer, primary_key=True)
     tenant_id = db.Column(db.Integer, db.ForeignKey('tenants.id'), nullable=False)
-    license_plate = db.Column(db.String(20), unique=True, nullable=False)
+    license_plate = db.Column(db.String(20), nullable=False)
 
     def to_dict(self):
         return {
@@ -464,7 +464,7 @@ class VisitorVehicle(db.Model):
     __tablename__ = 'visitor_vehicles'
     id = db.Column(db.Integer, primary_key=True)
     visitor_id = db.Column(db.Integer, db.ForeignKey('visitors.id'), nullable=False)
-    license_plate = db.Column(db.String(20), unique=True, nullable=False)
+    license_plate = db.Column(db.String(20), nullable=False)
 
     def to_dict(self):
         return {
