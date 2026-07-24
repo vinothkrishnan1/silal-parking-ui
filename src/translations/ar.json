@@ -706,6 +706,8 @@
                                  "houseNo":  "رقم الوحدة:",
                                  "houseNumber":  "رقم الوحدة",
                                  "block":  "البلوك",
+                                 "companyName":  "اسم الشركة",
+                                 "buildingNumber":  "رقم المبنى",
                                  "noVehicles":  "لا توجد مركبات",
                                  "customPlan":  "خطة مخصصة",
                                  "pendingPayment":  "دفع معلق",

@@ -66,12 +66,14 @@ def create_app():
     from routes.staff_routes import staff_bp, ensure_staff_pass_schema
     app.register_blueprint(staff_bp, url_prefix='/api/staff-passes')
     from routes.pricing_routes import ensure_pricing_schema
+    from routes.visitor_routes import ensure_visitor_schema
     with app.app_context():
         ensure_tenant_schema()
         ensure_vehicle_payment_schema()
         ensure_staff_pass_schema()
         ensure_device_config_schema()
         ensure_pricing_schema()
+        ensure_visitor_schema()
 
     create_initial_admin(app)
     register_subscription_status_lifespan(app)

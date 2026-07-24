@@ -49,6 +49,8 @@ const createInitialFormData = () => {
     visitor_id: null,
     visitor_name: '',
     phone_number: '',
+    company_name: '',
+    building_number: '',
     house_number: '',
     block: '',
     visitor_type: 'Visitor',
@@ -289,6 +291,8 @@ const VisitorVehicles = () => {
         ...visitor,
         vehicles: visitor.vehicles && visitor.vehicles.length > 0 ? visitor.vehicles : [''],
         phone_number: sanitizeDigits(visitor.phone_number || '', 8),
+        company_name: visitor.company_name || '',
+        building_number: visitor.building_number || '',
         house_number: visitor.house_number || '',
         block: visitor.block || '',
         start_date: visitor.start_date || todayStr,
@@ -433,6 +437,8 @@ const VisitorVehicles = () => {
       const combinedText = [
         visitor.visitor_name,
         visitor.phone_number,
+        visitor.company_name,
+        visitor.building_number,
         visitor.planName,
         visitor.payment_status,
         normalizeSubscriptionPaymentMethod(visitor.payment_method),
@@ -557,8 +563,15 @@ const VisitorVehicles = () => {
                             <div className="text-sm font-black text-gray-900 tracking-tight">{visitor.visitor_name}</div>
                             <div className={`space-y-1 ${language === 'ar' ? 'text-right' : ''}`}>
                               <div className="text-[11px] font-bold text-gray-500 tracking-wide">
-                                <Phone size={12} className={`${language === 'ar' ? 'ml-1' : 'mr-1'} text-premium-gold`} /> {visitor.phone_number || '--'}
+                                <Phone size={12} className={`${language === 'ar' ? 'ml-1' : 'mr-1'} text-premium-gold inline`} /> {visitor.phone_number || '--'}
                               </div>
+                              {(visitor.company_name || visitor.building_number) && (
+                                <div className="text-[11px] font-medium text-gray-400">
+                                  {visitor.company_name && <span>{visitor.company_name}</span>}
+                                  {visitor.company_name && visitor.building_number && <span> • </span>}
+                                  {visitor.building_number && <span>Bldg: {visitor.building_number}</span>}
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -678,29 +691,57 @@ const VisitorVehicles = () => {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div className="sm:col-span-2 space-y-4">
-                  <div>
-                    <label className={`block text-sm font-semibold text-gray-700 mb-1.5 ${language === 'ar' ? 'text-right' : ''}`}>{language === 'ar' ? 'اسم الزائر' : 'Visitor Name'}</label>
-                    <input
-                      type="text"
-                      placeholder="Visitor Name"
-                      value={formData.visitor_name || ''}
-                      onChange={(event) => {
-                        setFormData({ ...formData, visitor_name: event.target.value });
-                      }}
-                      className={`block w-full py-3 bg-gray-50/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-[#121212] focus:border-[#121212] focus:bg-white transition-all text-sm font-medium text-gray-900 shadow-sm px-4 ${language === 'ar' ? 'text-right' : 'text-left'}`}
-                    />
-                  </div>
-                  <div>
-                    <label className={`block text-sm font-semibold text-gray-700 mb-1.5 ${language === 'ar' ? 'text-right' : ''}`}>Phone Number</label>
-                    <input
-                      type="text"
-                      placeholder="Phone Number"
-                      value={formData.phone_number || ''}
-                      onChange={(event) => {
-                        setFormData({ ...formData, phone_number: event.target.value });
-                      }}
-                      className={`block w-full py-3 bg-gray-50/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-[#121212] focus:border-[#121212] focus:bg-white transition-all text-sm font-medium text-gray-900 shadow-sm px-4 ${language === 'ar' ? 'text-right' : 'text-left'}`}
-                    />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className={`block text-sm font-semibold text-gray-700 mb-1.5 ${language === 'ar' ? 'text-right' : ''}`}>{t('visitorSubscriptions.visitorName') || (language === 'ar' ? 'اسم الزائر' : 'Visitor Name')}</label>
+                      <input
+                        type="text"
+                        placeholder="Visitor Name"
+                        value={formData.visitor_name || ''}
+                        onChange={(event) => {
+                          setFormData({ ...formData, visitor_name: event.target.value });
+                        }}
+                        className={`block w-full py-3 bg-gray-50/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-[#121212] focus:border-[#121212] focus:bg-white transition-all text-sm font-medium text-gray-900 shadow-sm px-4 ${language === 'ar' ? 'text-right' : 'text-left'}`}
+                      />
+                    </div>
+                    <div>
+                      <label className={`block text-sm font-semibold text-gray-700 mb-1.5 ${language === 'ar' ? 'text-right' : ''}`}>{language === 'ar' ? 'رقم الهاتف' : 'Phone Number'}</label>
+                      <input
+                        type="text"
+                        placeholder="Phone Number"
+                        value={formData.phone_number || ''}
+                        onChange={(event) => {
+                          setFormData({ ...formData, phone_number: event.target.value });
+                        }}
+                        className={`block w-full py-3 bg-gray-50/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-[#121212] focus:border-[#121212] focus:bg-white transition-all text-sm font-medium text-gray-900 shadow-sm px-4 ${language === 'ar' ? 'text-right' : 'text-left'}`}
+                      />
+                    </div>
+                    <div>
+                      <label className={`block text-sm font-semibold text-gray-700 mb-1.5 ${language === 'ar' ? 'text-right' : ''}`}>{t('visitorSubscriptions.companyName') || (language === 'ar' ? 'اسم الشركة' : 'Company Name')}</label>
+                      <input
+                        type="text"
+                        name="company_name"
+                        placeholder="Company Name"
+                        value={formData.company_name || ''}
+                        onChange={(event) => {
+                          setFormData({ ...formData, company_name: event.target.value });
+                        }}
+                        className={`block w-full py-3 bg-gray-50/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-[#121212] focus:border-[#121212] focus:bg-white transition-all text-sm font-medium text-gray-900 shadow-sm px-4 ${language === 'ar' ? 'text-right' : 'text-left'}`}
+                      />
+                    </div>
+                    <div>
+                      <label className={`block text-sm font-semibold text-gray-700 mb-1.5 ${language === 'ar' ? 'text-right' : ''}`}>{t('visitorSubscriptions.buildingNumber') || (language === 'ar' ? 'رقم المبنى' : 'Building Number')}</label>
+                      <input
+                        type="text"
+                        name="building_number"
+                        placeholder="Building Number"
+                        value={formData.building_number || ''}
+                        onChange={(event) => {
+                          setFormData({ ...formData, building_number: event.target.value });
+                        }}
+                        className={`block w-full py-3 bg-gray-50/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-[#121212] focus:border-[#121212] focus:bg-white transition-all text-sm font-medium text-gray-900 shadow-sm px-4 ${language === 'ar' ? 'text-right' : 'text-left'}`}
+                      />
+                    </div>
                   </div>
                 </div>
 

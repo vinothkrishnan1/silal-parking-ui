@@ -375,6 +375,8 @@ class Visitor(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     visitor_name = db.Column(db.String(100), nullable=False)
     phone_number = db.Column(db.String(20), nullable=False)
+    company_name = db.Column(db.String(100), nullable=True)
+    building_number = db.Column(db.String(100), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # Relationships
@@ -386,6 +388,8 @@ class Visitor(db.Model):
             'id': self.id,
             'visitor_name': self.visitor_name,
             'phone_number': self.phone_number,
+            'company_name': self.company_name,
+            'building_number': self.building_number,
             'vehicles': [v.license_plate for v in self.vehicles],
             'created_at': serialize_datetime(self.created_at)
         }
@@ -440,6 +444,8 @@ class VisitorSubscription(db.Model):
             'visitor_id': self.visitor_id,
             'visitor_name': self.visitor.visitor_name if self.visitor else "Unknown",
             'phone_number': self.visitor.phone_number if self.visitor else "",
+            'company_name': self.visitor.company_name if self.visitor else "",
+            'building_number': self.visitor.building_number if self.visitor else "",
             'vehicles': [v.license_plate for v in self.visitor.vehicles] if self.visitor else [],
             'start_date': self.start_date.isoformat() if self.start_date else None,
             'end_date': self.end_date.isoformat() if self.end_date else None,

@@ -706,6 +706,8 @@
                                  "houseNo":  "House No:",
                                  "houseNumber":  "House Number",
                                  "block":  "Block",
+                                 "companyName":  "Company Name",
+                                 "buildingNumber":  "Building Number",
                                  "noVehicles":  "No vehicles linked",
                                  "customPlan":  "Custom Plan",
                                  "pendingPayment":  "Pending Payment",

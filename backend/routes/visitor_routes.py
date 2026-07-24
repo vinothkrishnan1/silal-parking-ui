@@ -26,7 +26,27 @@ SUBSCRIPTION_PAYMENT_METHODS = {'cash': 'Cash', 'card': 'Card', 'online': 'Onlin
 
 
 def ensure_visitor_schema():
-    pass
+    inspector = inspect(db.engine)
+    table_name = Visitor.__tablename__
+
+    if not inspector.has_table(table_name):
+        return
+
+    existing_columns = {column['name'] for column in inspector.get_columns(table_name)}
+    schema_updates = []
+
+    if 'company_name' not in existing_columns:
+        schema_updates.append("ALTER TABLE visitors ADD COLUMN company_name VARCHAR(100) NULL")
+    if 'building_number' not in existing_columns:
+        schema_updates.append("ALTER TABLE visitors ADD COLUMN building_number VARCHAR(100) NULL")
+
+    if not schema_updates:
+        return
+
+    with db.engine.begin() as connection:
+        for statement in schema_updates:
+            connection.execute(text(statement))
+
 
 
 def _normalize_text(value):
@@ -124,7 +144,9 @@ def add_visitor():
     try:
         new_visitor = Visitor(
             visitor_name=_normalize_text(data.get('visitor_name')),
-            phone_number=_normalize_text(data.get('phone_number'))
+            phone_number=_normalize_text(data.get('phone_number')),
+            company_name=_normalize_text(data.get('company_name')) or None,
+            building_number=_normalize_text(data.get('building_number')) or None
         )
         db.session.add(new_visitor)
         db.session.flush()
@@ -147,6 +169,8 @@ def update_visitor(id):
     try:
         if 'visitor_name' in data: visitor.visitor_name = data['visitor_name']
         if 'phone_number' in data: visitor.phone_number = _normalize_text(data.get('phone_number'))
+        if 'company_name' in data: visitor.company_name = _normalize_text(data.get('company_name')) or None
+        if 'building_number' in data: visitor.building_number = _normalize_text(data.get('building_number')) or None
         
         if 'vehicles' in data:
             VisitorVehicle.query.filter_by(visitor_id=visitor.id).delete()
@@ -189,13 +213,20 @@ def add_subscription():
             if not visitor_name or not phone_number:
                 return jsonify({"error": "Please select a visitor or provide a name and phone number."}), 400
             
-            visitor = Visitor(visitor_name=_normalize_text(visitor_name), phone_number=_normalize_text(phone_number))
+            visitor = Visitor(
+                visitor_name=_normalize_text(visitor_name),
+                phone_number=_normalize_text(phone_number),
+                company_name=_normalize_text(data.get('company_name')) or None,
+                building_number=_normalize_text(data.get('building_number')) or None
+            )
             db.session.add(visitor)
             db.session.flush() # To get visitor.id
         else:
             visitor = Visitor.query.get(int(visitor_id))
             if not visitor:
                 return jsonify({"error": "Selected visitor was not found."}), 404
+            if 'company_name' in data: visitor.company_name = _normalize_text(data.get('company_name')) or None
+            if 'building_number' in data: visitor.building_number = _normalize_text(data.get('building_number')) or None
 
         plan_id = _normalize_plan_id(data.get('subscription_plan_id'))
         allocated_slots = _parse_allocated_slots(data.get('allocated_slots', 1))
@@ -291,13 +322,17 @@ def update_subscription(id):
             if not visitor:
                 return jsonify({"error": "Selected visitor was not found."}), 404
             sub.visitor_id = visitor_id
-        elif sub.visitor_id and (data.get('visitor_name') or data.get('phone_number')):
+        elif sub.visitor_id:
             visitor = Visitor.query.get(sub.visitor_id)
             if visitor:
                 if data.get('visitor_name'):
                     visitor.visitor_name = _normalize_text(data['visitor_name'])
                 if data.get('phone_number'):
                     visitor.phone_number = _normalize_text(data['phone_number'])
+                if 'company_name' in data:
+                    visitor.company_name = _normalize_text(data.get('company_name')) or None
+                if 'building_number' in data:
+                    visitor.building_number = _normalize_text(data.get('building_number')) or None
 
         if 'start_date' in data:
             sub.start_date = _parse_subscription_date(data['start_date'], 'Start Date')

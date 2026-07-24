@@ -156,7 +156,9 @@ const VisitorSubscriptionHistory = () => {
         ...statusMeta,
         planName: matchedPlan?.name || subscription.subscription_plan_name || subscription.plan_name || t('visitorSubscriptionHistory.customPlan'),
         vehicleType: matchedPlan?.vehicle_type || t('visitorSubscriptionHistory.vehicleTypeNotSet'),
-        phone: subscription.phone_number || matchedVisitor?.phone_number || ''
+        phone: subscription.phone_number || matchedVisitor?.phone_number || '',
+        company_name: subscription.company_name || matchedVisitor?.company_name || '',
+        building_number: subscription.building_number || matchedVisitor?.building_number || ''
       };
     });
 
@@ -174,6 +176,8 @@ const VisitorSubscriptionHistory = () => {
       const combinedText = [
         row.visitor_name,
         row.phone,
+        row.company_name,
+        row.building_number,
         row.planName,
         row.vehicleType,
         row.payment_status,
@@ -353,6 +357,13 @@ const VisitorSubscriptionHistory = () => {
                             <div className="text-[11px] font-bold text-gray-500 tracking-wide flex items-center">
                               <Phone size={12} className={`${language === 'ar' ? 'ml-1' : 'mr-1'} text-premium-gold`} /> {row.phone || '--'}
                             </div>
+                            {(row.company_name || row.building_number) && (
+                              <div className="text-[11px] font-medium text-gray-400">
+                                {row.company_name && <span>{row.company_name}</span>}
+                                {row.company_name && row.building_number && <span> • </span>}
+                                {row.building_number && <span>Bldg: {row.building_number}</span>}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
