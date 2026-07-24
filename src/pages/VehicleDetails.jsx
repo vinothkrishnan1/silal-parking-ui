@@ -48,6 +48,7 @@ const VehicleDetails = () => {
   const [paymentGatewayData, setPaymentGatewayData] = useState({ cardNumber: '', expiry: '', cvv: '', name: '' });
   const [paymentGatewayError, setPaymentGatewayError] = useState('');
   const [qrPaymentType, setQrPaymentType] = useState('onDemand'); // 'onDemand' | 'monthlyPass'
+  const [purchaseCustomerName, setPurchaseCustomerName] = useState('');
   const [pricingPlans, setPricingPlans] = useState([]);
   const [pricingLoading, setPricingLoading] = useState(false);
 
@@ -109,6 +110,17 @@ const VehicleDetails = () => {
     const interval = setInterval(fetchSlotData, 5000);
     return () => clearInterval(interval);
   }, [selectedLocation]);
+
+  // Auto-transition from scanning to qrLanding after 1.5s
+  useEffect(() => {
+    let timer;
+    if (showScanModal && paymentStep === 'scanning') {
+      timer = setTimeout(() => {
+        setPaymentStep('qrLanding');
+      }, 1500);
+    }
+    return () => clearTimeout(timer);
+  }, [showScanModal, paymentStep]);
 
   useEffect(() => {
     const timer = setInterval(() => setTick(t => t + 1), 60000);
@@ -207,7 +219,7 @@ const VehicleDetails = () => {
 
   const handleScanTicket = () => {
     setShowScanModal(true);
-    setPaymentStep('initial');
+    setPaymentStep('scanning');
     setScannedVehicleData(null);
     setWaiverRemarks('');
     setScanVehicleInput('');
@@ -215,6 +227,7 @@ const VehicleDetails = () => {
     setSelectedSlot(null);
     setPaymentGatewayData({ cardNumber: '', expiry: '', cvv: '', name: '' });
     setPaymentGatewayError('');
+    setPurchaseCustomerName('');
   };
 
   const handleQrScanSimulate = () => {
@@ -271,6 +284,43 @@ const VehicleDetails = () => {
     setPaymentStep('qrLanding');
   };
 
+  const handleOnDemandLookup = () => {
+    if (!scanVehicleInput.trim()) {
+      setScanVehicleError('Please enter a vehicle number.');
+      return;
+    }
+    const insideVehicles = vehiclesData.filter(v => !v.exitTime);
+    const matched = insideVehicles.find(v => v.vehicleNumber.toLowerCase() === scanVehicleInput.trim().toLowerCase());
+    
+    if (matched) {
+      setScanVehicleError('');
+      setScannedVehicleData({
+        ...matched,
+        calculatedFee: calculateParkingFee(matched),
+        paymentTime: new Date().toISOString()
+      });
+      setPaymentStep('onDemandPaymentGateway');
+    } else {
+      setScanVehicleError('Vehicle not found inside parking. Please check the number and try again.');
+    }
+  };
+
+  const handlePurchaseProceed = () => {
+    if (!scanVehicleInput.trim()) {
+      setScanVehicleError('Please enter a vehicle number.');
+      return;
+    }
+    if (!purchaseCustomerName.trim()) {
+      setScanVehicleError('Please enter your full name.');
+      return;
+    }
+    if (!selectedSlot) {
+      return;
+    }
+    setScanVehicleError('');
+    setPaymentStep('purchaseSlotPaymentGateway');
+  };
+
   const handleGatewayPayment = (nextStep) => {
     if (!paymentGatewayData.name.trim()) { setPaymentGatewayError('Please enter cardholder name.'); return; }
     const rawCard = paymentGatewayData.cardNumber.replace(/\s/g, '');
@@ -293,7 +343,9 @@ const VehicleDetails = () => {
 
   // Derive monthly pass slot cards from live API pricing data
   const MONTHLY_PASS_SLOTS = pricingPlans.length > 0
-    ? pricingPlans.map((plan, idx) => {
+    ? pricingPlans
+        .filter(plan => plan.pricing_type?.toLowerCase().includes('subscription') || (plan.price > 0 && (!plan.tiers || plan.tiers.length === 0)))
+        .map((plan, idx) => {
         // Build duration label: Tenant Subscription plans use start_date/end_date or price directly
         // Visitor Parking plans use their tiers
         let durationLabel = 'Plan';
@@ -1072,123 +1124,131 @@ const VehicleDetails = () => {
                 </div>
               )}
 
-              {/* QR Landing Page */}
-              {paymentStep === 'qrLanding' && (
-                <div className="space-y-5">
-                  {/* Simulated phone/browser landing page */}
-                  <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-5 text-white relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-40 h-40 bg-premium-gold/10 rounded-full blur-3xl"></div>
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="bg-premium-gold/20 p-2 rounded-lg">
-                        <Globe size={18} className="text-premium-gold" />
-                      </div>
-                      <div>
-                        <p className="text-[10px] text-gray-400 uppercase tracking-widest">Pro Parking · Silal Market</p>
-                        <p className="text-xs font-bold text-gray-200">proparking.silalmarket.com</p>
-                      </div>
-                      <div className="ml-auto flex items-center gap-1">
-                        <Wifi size={12} className="text-green-400" />
-                        <Shield size={12} className="text-green-400" />
-                      </div>
-                    </div>
-                    <div className="border-t border-white/10 pt-4">
-                      <p className="text-xs text-gray-400 mb-1">Vehicle Detected</p>
-                      <h4 className="text-2xl font-black tracking-widest text-white">
-                        {scannedVehicleData?.vehicleNumber || scanVehicleInput}
-                      </h4>
-                      <p className="text-xs text-premium-gold font-bold mt-1 uppercase tracking-wider">
-                        {scannedVehicleData?.type || 'Visitor'} · Session Active
-                      </p>
-                    </div>
+              {/* Scanning Animation State */}
+              {paymentStep === 'scanning' && (
+                <div className="flex flex-col items-center py-10">
+                  <div className="relative w-48 h-48 mb-8 border-4 border-dashed border-premium-gold/30 rounded-3xl overflow-hidden shadow-[0_0_30px_rgba(212,175,55,0.15)] flex items-center justify-center bg-gray-50">
+                    <QrCode size={80} className="text-gray-300" />
+                    <div className="absolute top-4 left-4 right-4 h-1 bg-premium-gold/80 animate-scan-line shadow-glow"></div>
                   </div>
-
-                  <p className="text-center text-sm font-bold text-gray-600">What would you like to do?</p>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <button
-                      className="p-5 rounded-2xl border-2 border-gray-100 hover:border-premium-gold hover:bg-premium-gold/5 transition-all flex flex-col items-center gap-3 group active:scale-95"
-                      onClick={() => { setQrPaymentType('onDemand'); setPaymentStep('onDemandDetails'); }}
-                    >
-                      <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-green-500/30 group-hover:scale-110 transition-transform">
-                        <CreditCard size={22} />
-                      </div>
-                      <div className="text-center">
-                        <div className="font-black text-gray-800 text-sm">Pay Now</div>
-                        <div className="text-[10px] font-bold text-gray-400 mt-0.5">On-Demand Payment</div>
-                      </div>
-                    </button>
-                    <button
-                      className="p-5 rounded-2xl border-2 border-gray-100 hover:border-premium-gold hover:bg-premium-gold/5 transition-all flex flex-col items-center gap-3 group active:scale-95"
-                      onClick={() => { setQrPaymentType('monthlyPass'); setPaymentStep('purchaseParkingSlots'); }}
-                    >
-                      <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-purple-500/30 group-hover:scale-110 transition-transform">
-                        <ShoppingBag size={22} />
-                      </div>
-                      <div className="text-center">
-                        <div className="font-black text-gray-800 text-sm">Purchase Parking</div>
-                        <div className="text-[10px] font-bold text-gray-400 mt-0.5">Monthly Pass</div>
-                      </div>
-                    </button>
-                  </div>
-
-                  <p className="text-center text-[10px] text-gray-400">
-                    🔒 Secured by Pro Parking · SSL Encrypted
-                  </p>
+                  <h4 className="text-lg font-bold text-gray-800 mb-1">Scanning...</h4>
+                  <p className="text-gray-400 text-xs">Simulating QR code scan</p>
                 </div>
               )}
 
-              {/* On-Demand Details */}
-              {paymentStep === 'onDemandDetails' && scannedVehicleData && (
+              {/* QR Landing Page */}
+              {paymentStep === 'qrLanding' && (
                 <div className="space-y-5">
-                  <div className={`bg-premium-gold/5 p-4 rounded-xl border border-premium-gold/20 flex items-center gap-4 shadow-sm ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
-                    <div className="bg-gradient-gold rounded-full p-3 text-white shadow-lg shadow-premium-gold/30">
-                      <Car size={22} />
+                  <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-6 text-white relative overflow-hidden text-center shadow-lg">
+                    <div className="absolute top-0 right-0 w-40 h-40 bg-premium-gold/10 rounded-full blur-3xl"></div>
+                    <div className="bg-premium-gold/20 p-4 rounded-full inline-block mb-3">
+                      <Globe size={24} className="text-premium-gold" />
                     </div>
-                    <div>
-                      <h4 className="font-black text-gray-900 text-lg">{scannedVehicleData.vehicleNumber}</h4>
-                      <p className="text-xs font-bold text-premium-gold uppercase tracking-widest">{scannedVehicleData.type}</p>
-                    </div>
+                    <h4 className="text-2xl font-black tracking-widest text-white">Pro Parking</h4>
+                    <p className="text-xs text-premium-gold font-bold mt-1 uppercase tracking-wider">
+                      Welcome to Silal Market
+                    </p>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-gray-50 p-3.5 rounded-xl border border-gray-100">
-                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Entry Time</p>
-                      <p className="text-xs font-bold text-gray-800">{formatDateTimeForDisplay(scannedVehicleData.entryTime)}</p>
+                  <p className="text-center text-sm font-bold text-gray-600">Please select an option:</p>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <button
+                      className="p-5 rounded-2xl border-2 border-gray-100 hover:border-premium-gold hover:bg-premium-gold/5 transition-all flex flex-col items-center gap-3 group active:scale-95 bg-white"
+                      onClick={() => { setQrPaymentType('onDemand'); setPaymentStep('onDemandVehicleInput'); }}
+                    >
+                      <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-green-500/30 group-hover:scale-110 transition-transform">
+                        <CreditCard size={28} />
+                      </div>
+                      <div className="text-center">
+                        <div className="font-black text-gray-800 text-base">Pay Now</div>
+                        <div className="text-[10px] font-bold text-gray-400 mt-1">On-Demand Exit</div>
+                      </div>
+                    </button>
+                    <button
+                      className="p-5 rounded-2xl border-2 border-gray-100 hover:border-premium-gold hover:bg-premium-gold/5 transition-all flex flex-col items-center gap-3 group active:scale-95 bg-white"
+                      onClick={() => { setQrPaymentType('monthlyPass'); setPaymentStep('purchaseParkingInput'); }}
+                    >
+                      <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-purple-500/30 group-hover:scale-110 transition-transform">
+                        <ShoppingBag size={28} />
+                      </div>
+                      <div className="text-center">
+                        <div className="font-black text-gray-800 text-base">Purchase</div>
+                        <div className="text-[10px] font-bold text-gray-400 mt-1">Parking Passes</div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* On-Demand Vehicle Input */}
+              {paymentStep === 'onDemandVehicleInput' && (
+                <div className="space-y-5">
+                  <div className="text-center mb-6">
+                    <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full mx-auto flex items-center justify-center text-white mb-3 shadow-lg">
+                      <CreditCard size={20} />
                     </div>
-                    <div className="bg-gray-50 p-3.5 rounded-xl border border-gray-100">
-                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Current Time</p>
-                      <p className="text-xs font-bold text-gray-800">{new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}</p>
-                    </div>
-                    <div className="bg-gray-50 p-3.5 rounded-xl border border-gray-100">
-                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Duration</p>
-                      <p className="text-xs font-bold text-gray-800">{computeDuration(scannedVehicleData.entryTime, null)}</p>
-                    </div>
-                    <div className="bg-gray-50 p-3.5 rounded-xl border border-gray-100">
-                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Status</p>
-                      <span className="text-xs font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-lg">Pending Payment</span>
-                    </div>
+                    <h4 className="text-lg font-black text-gray-800">Pay Now</h4>
+                    <p className="text-xs text-gray-400">Enter your vehicle number to proceed</p>
                   </div>
 
-                  <div className="bg-white p-5 rounded-2xl border-2 border-premium-gold/30 text-center relative overflow-hidden shadow-[0_0_20px_rgba(212,175,55,0.1)]">
-                    <div className="absolute top-0 right-0 p-2 opacity-5"><DollarSign size={80} className="text-premium-gold" /></div>
-                    <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-1">Amount Due</span>
-                    <span className="text-4xl font-black text-gradient-gold drop-shadow-sm">{t('dashboard.omr')} {scannedVehicleData.calculatedFee}</span>
-                    <p className="text-[10px] text-gray-400 mt-2">Based on configured time slab pricing</p>
+                  <div className="w-full space-y-3">
+                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest text-left">Vehicle Number</label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <Car size={18} className="text-gray-400" />
+                      </div>
+                      <input
+                        type="text"
+                        className="w-full pl-11 pr-4 py-4 border-2 border-gray-100 rounded-xl focus:outline-none focus:ring-4 focus:ring-premium-gold/10 focus:border-premium-gold transition-all bg-gray-50 focus:bg-white text-lg font-black uppercase placeholder:normal-case placeholder:font-bold placeholder:text-gray-300"
+                        placeholder="e.g. ABC 1234"
+                        value={scanVehicleInput}
+                        onChange={(e) => { setScanVehicleInput(e.target.value.toUpperCase()); setScanVehicleError(''); }}
+                        onKeyDown={(e) => e.key === 'Enter' && handleOnDemandLookup()}
+                        autoFocus
+                      />
+                    </div>
+                    {scanVehicleError && (
+                      <p className="text-red-500 text-xs font-bold text-left flex items-center gap-1.5">
+                        <X size={12} /> {scanVehicleError}
+                      </p>
+                    )}
                   </div>
 
                   <button
-                    className="ripple-button w-full px-4 py-4 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-black text-base hover:shadow-lg hover:shadow-green-500/30 active:scale-95 transition-all flex items-center justify-center gap-2"
-                    onClick={() => setPaymentStep('onDemandPaymentGateway')}
+                    className="ripple-button w-full px-4 py-4 bg-gradient-to-r from-premium-black to-[#1a1a1a] text-white rounded-xl font-black text-base hover:shadow-lg hover:shadow-black/20 active:scale-95 transition-all flex items-center justify-center gap-2"
+                    onClick={handleOnDemandLookup}
                   >
-                    <CreditCard size={18} /> Proceed to Payment
+                    Find & Pay
                   </button>
-                  <button className="w-full py-2.5 text-sm text-gray-400 font-bold hover:text-gray-600 transition-colors" onClick={() => setPaymentStep('qrLanding')}>← Back</button>
+                  <button className="w-full py-2 text-sm text-gray-400 font-bold hover:text-gray-600 transition-colors" onClick={() => setPaymentStep('qrLanding')}>← Back</button>
                 </div>
               )}
 
               {/* Online Payment Gateway Simulation - On Demand */}
               {paymentStep === 'onDemandPaymentGateway' && scannedVehicleData && (
                 <div className="space-y-5">
+                  <div className="text-center">
+                    <h4 className="text-lg font-black text-gray-800">Checkout</h4>
+                    <p className="text-xs text-gray-400">Complete your payment to exit</p>
+                  </div>
+
+                  {/* Fee Summary */}
+                  <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                    <div className="flex justify-between items-center mb-3 pb-3 border-b border-gray-200 border-dashed">
+                      <span className="text-xs font-bold text-gray-500 uppercase">Vehicle</span>
+                      <span className="font-black text-gray-800">{scannedVehicleData.vehicleNumber}</span>
+                    </div>
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-xs font-bold text-gray-500">Entry Time</span>
+                      <span className="text-xs font-bold text-gray-800">{formatDateTimeForDisplay(scannedVehicleData.entryTime)}</span>
+                    </div>
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-xs font-bold text-gray-500">Duration</span>
+                      <span className="text-xs font-bold text-gray-800">{computeDuration(scannedVehicleData.entryTime, null)}</span>
+                    </div>
+                  </div>
+
                   {/* Gateway Header */}
                   <div className="bg-gradient-to-r from-slate-800 to-slate-900 rounded-xl p-4 flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -1196,8 +1256,8 @@ const VehicleDetails = () => {
                       <span className="text-green-400 text-xs font-bold">Secure Payment</span>
                     </div>
                     <div className="text-right">
-                      <p className="text-white font-black text-lg">{t('dashboard.omr')} {scannedVehicleData.calculatedFee}</p>
-                      <p className="text-gray-400 text-[10px]">Parking Fee · {scannedVehicleData.vehicleNumber}</p>
+                      <p className="text-white/70 text-[10px] uppercase font-bold tracking-wider mb-0.5">Total Due</p>
+                      <p className="text-white font-black text-xl">{t('dashboard.omr')} {scannedVehicleData.calculatedFee}</p>
                     </div>
                   </div>
 
@@ -1291,7 +1351,7 @@ const VehicleDetails = () => {
                     <Shield size={18} /> Pay {t('dashboard.omr')} {scannedVehicleData.calculatedFee} Securely
                   </button>
                   <p className="text-center text-[10px] text-gray-400">🔒 256-bit SSL Encrypted · PCI DSS Compliant</p>
-                  <button className="w-full py-2 text-sm text-gray-400 font-bold hover:text-gray-600 transition-colors" onClick={() => setPaymentStep('onDemandDetails')}>← Back</button>
+                  <button className="w-full py-2 text-sm text-gray-400 font-bold hover:text-gray-600 transition-colors" onClick={() => setPaymentStep('onDemandVehicleInput')}>← Back</button>
                 </div>
               )}
 
@@ -1328,15 +1388,47 @@ const VehicleDetails = () => {
                 );
               })()}
 
-              {/* Purchase Parking Slots */}
-              {paymentStep === 'purchaseParkingSlots' && (
+              {/* Purchase Parking Input */}
+              {paymentStep === 'purchaseParkingInput' && (
                 <div className="space-y-4">
                   <div className="text-center">
-                    <h4 className="font-black text-gray-800 text-base">Choose Your Parking Pass</h4>
-                    <p className="text-gray-400 text-xs mt-1">Select a plan that suits your needs</p>
+                    <h4 className="font-black text-gray-800 text-base">Purchase Parking Pass</h4>
+                    <p className="text-gray-400 text-xs mt-1">Enter your details and select a plan</p>
+                  </div>
+
+                  <div className="space-y-3 mb-6 bg-gray-50 p-4 rounded-xl border border-gray-100">
+                    <div>
+                      <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Vehicle Number</label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <Car size={14} className="text-gray-400" />
+                        </div>
+                        <input
+                          type="text"
+                          className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-purple-400 bg-white text-sm font-bold uppercase transition-all"
+                          placeholder="e.g. ABC 1234"
+                          value={scanVehicleInput}
+                          onChange={(e) => { setScanVehicleInput(e.target.value.toUpperCase()); setScanVehicleError(''); }}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Full Name</label>
+                      <input
+                        type="text"
+                        className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-purple-400 bg-white text-sm font-bold transition-all"
+                        placeholder="Enter your name"
+                        value={purchaseCustomerName}
+                        onChange={(e) => { setPurchaseCustomerName(e.target.value); setScanVehicleError(''); }}
+                      />
+                    </div>
+                    {scanVehicleError && (
+                      <p className="text-red-500 text-xs font-bold flex items-center gap-1.5 pt-1"><X size={12} />{scanVehicleError}</p>
+                    )}
                   </div>
 
                   <div className="space-y-3">
+                    <h5 className="text-xs font-bold text-gray-600 mb-2">Available Plans</h5>
                     {pricingLoading ? (
                       <div className="flex flex-col items-center py-8 gap-3">
                         <div className="w-10 h-10 rounded-full border-4 border-t-purple-600 border-r-purple-600 border-b-transparent border-l-transparent animate-spin"></div>
@@ -1396,7 +1488,7 @@ const VehicleDetails = () => {
                         : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                     }`}
                     disabled={!selectedSlot}
-                    onClick={() => selectedSlot && setPaymentStep('purchaseSlotPaymentGateway')}
+                    onClick={handlePurchaseProceed}
                   >
                     <ShoppingBag size={18} />
                     {selectedSlot ? `Proceed to Pay ${t('dashboard.omr')} ${selectedSlot.price}` : 'Select a Pass to Continue'}
@@ -1412,9 +1504,9 @@ const VehicleDetails = () => {
                   <div className={`bg-gradient-to-br ${selectedSlot.color} rounded-xl p-4 text-white`}>
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-white/70 text-xs font-bold uppercase tracking-wider">Purchasing</p>
+                        <p className="text-white/70 text-xs font-bold uppercase tracking-wider">Purchasing for {purchaseCustomerName}</p>
                         <h4 className="font-black text-xl">{selectedSlot.label}</h4>
-                        <p className="text-white/80 text-xs">{selectedSlot.duration} access · {scannedVehicleData?.vehicleNumber || scanVehicleInput}</p>
+                        <p className="text-white/80 text-xs">{selectedSlot.duration} access · {scanVehicleInput}</p>
                       </div>
                       <div className="text-right">
                         <p className="text-white/70 text-xs">Total</p>
@@ -1506,8 +1598,8 @@ const VehicleDetails = () => {
                           <Check size={24} className="text-white" />
                         </div>
                         <div>
-                          <h4 className="font-black text-xl">Pass Activated!</h4>
-                          <p className="text-green-100 text-xs">Your {selectedSlot.label} is now active</p>
+                          <h4 className="font-black text-xl">Payment successful.</h4>
+                          <p className="text-green-100 text-xs">Please exit within 30 minutes.</p>
                         </div>
                       </div>
                     </div>
@@ -1521,12 +1613,20 @@ const VehicleDetails = () => {
                       </div>
                       <div className="grid grid-cols-2 gap-y-3 text-sm">
                         <div>
+                          <p className="text-white/60 text-[10px] font-black uppercase tracking-wider">Name</p>
+                          <p className="font-black text-white">{purchaseCustomerName || 'Customer'}</p>
+                        </div>
+                        <div>
                           <p className="text-white/60 text-[10px] font-black uppercase tracking-wider">Vehicle</p>
                           <p className="font-black text-white">{scannedVehicleData?.vehicleNumber || scanVehicleInput}</p>
                         </div>
                         <div>
                           <p className="text-white/60 text-[10px] font-black uppercase tracking-wider">Amount Paid</p>
                           <p className="font-black text-white">{t('dashboard.omr')} {selectedSlot.price}</p>
+                        </div>
+                        <div>
+                          <p className="text-white/60 text-[10px] font-black uppercase tracking-wider">Status</p>
+                          <p className="font-black text-white">Paid</p>
                         </div>
                         <div>
                           <p className="text-white/60 text-[10px] font-black uppercase tracking-wider">Valid From</p>
@@ -1561,7 +1661,7 @@ const VehicleDetails = () => {
 
                     <button
                       className="ripple-button w-full py-3.5 bg-gradient-to-r from-premium-black to-[#1a1a1a] text-white rounded-xl font-bold hover:shadow-lg hover:shadow-black/20 active:scale-95 transition-all"
-                      onClick={() => { setShowScanModal(false); setScannedVehicleData(null); setPaymentStep('initial'); setSelectedSlot(null); setScanVehicleInput(''); setPaymentGatewayData({ cardNumber: '', expiry: '', cvv: '', name: '' }); }}
+                      onClick={() => { setShowScanModal(false); setScannedVehicleData(null); setPaymentStep('scanning'); setSelectedSlot(null); setScanVehicleInput(''); setPurchaseCustomerName(''); setPaymentGatewayData({ cardNumber: '', expiry: '', cvv: '', name: '' }); }}
                     >
                       Done
                     </button>
@@ -1675,15 +1775,19 @@ const VehicleDetails = () => {
 
               {paymentStep === 'receipt' && scannedVehicleData && (
                 <div className="py-2"> 
-                  <div className={`w-full p-5 rounded-2xl mb-6 flex items-center gap-4 ${scannedVehicleData.paymentMethod === 'Waiver' ? 'bg-gray-50 border border-gray-200' : 'bg-premium-gold/5 border border-premium-gold/20'} ${language === 'ar' ? 'flex-row-reverse text-right' : 'text-left'}`}> 
-                    <div className={`rounded-full p-3 text-white shadow-lg ${scannedVehicleData.paymentMethod === 'Waiver' ? 'bg-gray-800 shadow-gray-200' : 'bg-gradient-gold shadow-premium-gold/30'}`}>
-                      <Check size={24} />
+                  <div className={`w-full p-5 rounded-2xl mb-6 flex flex-col items-start gap-4 ${scannedVehicleData.paymentMethod === 'Waiver' ? 'bg-gray-50 border border-gray-200' : 'bg-premium-gold/5 border border-premium-gold/20'} ${language === 'ar' ? 'text-right' : 'text-left'}`}> 
+                    <div className={`flex items-center gap-4 ${language === 'ar' ? 'flex-row-reverse w-full' : 'w-full'}`}>
+                      <div className={`rounded-full p-3 text-white shadow-lg ${scannedVehicleData.paymentMethod === 'Waiver' ? 'bg-gray-800 shadow-gray-200' : 'bg-gradient-gold shadow-premium-gold/30'}`}>
+                        <Check size={24} />
+                      </div> 
+                      <div>
+                        <h4 className={`font-black text-lg ${scannedVehicleData.paymentMethod === 'Waiver' ? 'text-gray-900' : 'text-premium-gold'}`}>{scannedVehicleData.paymentMethod === 'Waiver' ? t('vehicles.waiverAppliedSuccess') : 'Payment successful.'}</h4>
+                        <p className={`text-sm font-bold ${scannedVehicleData.paymentMethod === 'Waiver' ? 'text-gray-500' : 'text-premium-gold/70'}`}>
+                          {scannedVehicleData.paymentMethod === 'Waiver' ? t('vehicles.receiptGenerated') : 'Please exit within 30 minutes.'}
+                        </p>
+                      </div>
                     </div> 
-                    <div>
-                      <h4 className={`font-black text-lg ${scannedVehicleData.paymentMethod === 'Waiver' ? 'text-gray-900' : 'text-premium-gold'}`}>{scannedVehicleData.paymentMethod === 'Waiver' ? t('vehicles.waiverAppliedSuccess') : t('vehicles.paymentSuccess')}</h4>
-                      <p className={`text-sm font-bold ${scannedVehicleData.paymentMethod === 'Waiver' ? 'text-gray-500' : 'text-premium-gold/70'}`}>{t('vehicles.receiptGenerated')}</p>
-                    </div> 
-                  </div> 
+                  </div>
 
                   <div ref={receiptRef} className={`border-2 border-gray-100 p-8 rounded-2xl bg-white shadow-inner ${language === 'ar' ? 'text-right' : 'text-left'}`}> 
                     <div className="text-center mb-8 border-b border-gray-100 pb-6"> 
@@ -1705,8 +1809,17 @@ const VehicleDetails = () => {
                         <span className="text-gray-800 font-bold">{formatDateTimeForDisplay(scannedVehicleData.entryTime)}</span>
                       </div> 
                       <div className="flex flex-col gap-1">
-                        <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">{t('vehicles.exitTime')}</span>
-                        <span className="text-gray-800 font-bold">{formatDateTimeForDisplay(scannedVehicleData.exitTime)}</span>
+                        <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">{t('vehicles.exitTime') || 'Expected Exit Time'}</span>
+                        <span className="text-gray-800 font-bold">
+                          {(() => {
+                            if (scannedVehicleData.paymentTime) {
+                              const expected = new Date(scannedVehicleData.paymentTime);
+                              expected.setMinutes(expected.getMinutes() + 30);
+                              return formatDateTimeForDisplay(expected.toISOString());
+                            }
+                            return formatDateTimeForDisplay(scannedVehicleData.exitTime);
+                          })()}
+                        </span>
                       </div> 
                       <div className="flex flex-col gap-1">
                         <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">{t('vehicles.duration')}</span>
@@ -1736,7 +1849,7 @@ const VehicleDetails = () => {
                         <Printer size={18} className={language === 'ar' ? 'ml-2' : 'mr-2'} />
                         {t('pricing.print')}
                      </button> 
-                    <button className="ripple-button flex-1 px-4 py-3.5 bg-gradient-to-r from-premium-black to-[#1a1a1a] text-white rounded-xl font-bold hover:shadow-lg hover:shadow-black/20 active:scale-95 transition-all" onClick={() => { setShowScanModal(false); setScannedVehicleData(null); setPaymentStep('initial'); setWaiverRemarks(''); }}>{t('common.close')}</button> 
+                    <button className="ripple-button flex-1 px-4 py-3.5 bg-gradient-to-r from-premium-black to-[#1a1a1a] text-white rounded-xl font-bold hover:shadow-lg hover:shadow-black/20 active:scale-95 transition-all" onClick={() => { setShowScanModal(false); setScannedVehicleData(null); setPaymentStep('scanning'); setWaiverRemarks(''); }}>{t('common.close')}</button> 
                   </div> 
                 </div>
               )}
