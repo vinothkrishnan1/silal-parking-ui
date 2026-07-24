@@ -39,8 +39,6 @@ const Pricing = () => {
     name: '',
     description: '',
     price: '0.00',
-    duration_value: 1,
-    duration_unit: 'months',
     start_date: '',
     end_date: '',
     is_active: true,
@@ -76,8 +74,6 @@ const Pricing = () => {
       name: item.name,
       description: item.description || '',
       price: item.price || '0.000',
-      duration_value: item.duration_value || 1,
-      duration_unit: item.duration_unit || 'months',
       start_date: item.start_date || '',
       end_date: item.end_date || '',
       is_active: item.is_active,
@@ -421,26 +417,6 @@ const Pricing = () => {
                       {errors.price}
                       </p>
                     )}
-                  </div>
-                  <div>
-                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">{t('pricing.duration') || 'Duration'}</label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        min="1"
-                        className={`w-full px-4 py-3.5 bg-gray-50/50 border border-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:border-premium-gold focus:ring-premium-gold/30 transition-all text-sm font-bold text-gray-900 shadow-sm ${language === 'ar' ? 'text-right' : 'text-left'}`}
-                        value={formData.duration_value}
-                        onChange={(e) => setFormData({ ...formData, duration_value: e.target.value === '' ? '' : parseInt(e.target.value) })}
-                      />
-                      <select
-                        className={`w-full max-w-[140px] px-4 py-3.5 bg-gray-50/50 border border-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:border-premium-gold focus:ring-premium-gold/30 transition-all text-sm font-bold text-gray-900 shadow-sm ${language === 'ar' ? 'text-right' : 'text-left'}`}
-                        value={formData.duration_unit}
-                        onChange={(e) => setFormData({ ...formData, duration_unit: e.target.value })}
-                      >
-                        <option value="days">{t('pricing.days') || 'Days'}</option>
-                        <option value="months">{t('pricing.months') || 'Months'}</option>
-                      </select>
-                    </div>
                   </div>
                 </>
               )}
