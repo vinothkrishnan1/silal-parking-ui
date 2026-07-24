@@ -698,6 +698,8 @@
                                  "noRecords":  "No subscription records found",
                                  "adjustSearch":  "Try adjusting your search or add a new subscription.",
                                  "visitorInfo":  "Visitor Info",
+                                 "visitorName":  "Visitor Name",
+                                 "phoneNumber":  "Phone Number",
                                  "vehicleDetails":  "Vehicle Details",
                                  "planPayment":  "Plan \u0026 Payment",
                                  "dates":  "Subscription Dates",

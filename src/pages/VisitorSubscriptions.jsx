@@ -41,6 +41,32 @@ const normalizeSubscriptionPaymentMethod = (value) => {
   return matchedMethod || 'Card';
 };
 
+const calculateSubscriptionEndDate = (startDateStr, selectedPlan) => {
+  if (!startDateStr) return getTodayInputValue();
+  const date = new Date(startDateStr);
+  if (isNaN(date.getTime())) return startDateStr;
+
+  const durationVal = selectedPlan && selectedPlan.duration_value !== undefined && selectedPlan.duration_value !== null
+    ? parseInt(selectedPlan.duration_value, 10)
+    : 30;
+  const durationUnit = selectedPlan?.duration_unit
+    ? String(selectedPlan.duration_unit).toLowerCase()
+    : 'days';
+
+  const val = isNaN(durationVal) ? 30 : durationVal;
+
+  if (durationUnit.includes('month')) {
+    date.setMonth(date.getMonth() + val);
+  } else {
+    date.setDate(date.getDate() + val);
+  }
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 const createInitialFormData = () => {
   const today = getTodayInputValue();
 
@@ -193,6 +219,17 @@ const VisitorVehicles = () => {
       setFormData((prev) => ({ ...prev, amount_paid: calculatedAmount }));
     }
   }, [formData.subscription_plan_id, formData.allocated_slots, formData.amount_paid, plans]);
+
+  useEffect(() => {
+    if (!formData.start_date) return;
+
+    const selectedPlan = plans.find((plan) => String(plan.id) === String(formData.subscription_plan_id));
+    const calculatedEndDate = calculateSubscriptionEndDate(formData.start_date, selectedPlan);
+
+    if (formData.end_date !== calculatedEndDate) {
+      setFormData((prev) => ({ ...prev, end_date: calculatedEndDate }));
+    }
+  }, [formData.start_date, formData.subscription_plan_id, plans]);
 
   const handleRefresh = async () => {
     await loadPageData({ refreshOnly: true });
@@ -817,12 +854,11 @@ const VisitorVehicles = () => {
                 <div>
                   <label className={`block text-sm font-semibold text-gray-700 mb-1.5 ${language === 'ar' ? 'text-right' : ''}`}>{t('visitorSubscriptions.endDate')}</label>
                   <input
-                    required
+                    disabled
                     type="date"
                     name="end_date"
                     value={formData.end_date}
-                    onChange={handleInputChange}
-                    className={`block w-full px-4 py-3 bg-gray-50/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-[#121212] focus:border-[#121212] focus:bg-white transition-all text-sm font-semibold text-gray-900 shadow-sm ${language === 'ar' ? 'text-right' : ''}`}
+                    className={`block w-full px-4 py-3 bg-gray-100 border border-gray-200 rounded-xl text-sm font-semibold text-gray-500 shadow-sm cursor-not-allowed ${language === 'ar' ? 'text-right' : ''}`}
                   />
                 </div>
 

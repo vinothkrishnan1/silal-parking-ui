@@ -39,6 +39,8 @@ const Pricing = () => {
     name: '',
     description: '',
     price: '0.00',
+    duration_value: 30,
+    duration_unit: 'Days',
     start_date: '',
     end_date: '',
     is_active: true,
@@ -74,6 +76,8 @@ const Pricing = () => {
       name: item.name,
       description: item.description || '',
       price: item.price || '0.000',
+      duration_value: item.duration_value !== undefined && item.duration_value !== null ? item.duration_value : 30,
+      duration_unit: item.duration_unit || 'Days',
       start_date: item.start_date || '',
       end_date: item.end_date || '',
       is_active: item.is_active,
@@ -419,6 +423,33 @@ const Pricing = () => {
                     )}
                   </div>
                 </>
+              )}
+
+              {formData.pricing_type === 'Visitor Subscription' && (
+                <div>
+                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">
+                    {language === 'ar' ? 'مدة الاشتراك' : 'Subscription Duration'}
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      className={`w-1/2 px-4 py-3.5 bg-gray-50/50 border border-gray-100 focus:border-premium-gold focus:ring-2 focus:ring-premium-gold/30 rounded-xl focus:outline-none focus:bg-white transition-all text-sm font-bold text-gray-900 shadow-sm ${language === 'ar' ? 'text-right' : 'text-left'}`}
+                      value={formData.duration_value}
+                      onChange={(e) => setFormData({ ...formData, duration_value: sanitizeDigits(e.target.value) })}
+                      placeholder="30"
+                    />
+                    <select
+                      className="w-1/2 px-4 py-3.5 bg-gray-50/50 border border-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-premium-gold/30 focus:border-premium-gold focus:bg-white transition-all text-sm font-bold text-gray-900 shadow-sm cursor-pointer"
+                      value={formData.duration_unit || 'Days'}
+                      onChange={(e) => setFormData({ ...formData, duration_unit: e.target.value })}
+                    >
+                      <option value="Days">{language === 'ar' ? 'أيام' : 'Days'}</option>
+                      <option value="Months">{language === 'ar' ? 'أشهر' : 'Months'}</option>
+                    </select>
+                  </div>
+                </div>
               )}
 
               <div className="md:col-span-2">
