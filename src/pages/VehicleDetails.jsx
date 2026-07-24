@@ -296,30 +296,39 @@ const VehicleDetails = () => {
     ? pricingPlans.map((plan, idx) => {
         // Build duration label: Tenant Subscription plans use start_date/end_date or price directly
         // Visitor Parking plans use their tiers
-        let durationLabel = plan.pricing_type === 'Tenant Subscription' ? 'Subscription' : 'Timed';
+        let durationLabel = 'Plan';
         let priceDisplay = '0.000';
         let featuresArr = [plan.pricing_type, plan.vehicle_type || '4-Wheeler', 'Digital Receipt'];
 
-        if (plan.pricing_type === 'Tenant Subscription') {
+        // Subscription-type plans (Tenant Subscription, Visitor Subscription, etc.)
+        // use the flat plan.price field. Visitor Parking plans use tiers.
+        const isSubscriptionPlan = plan.pricing_type?.toLowerCase().includes('subscription') || (plan.price > 0 && (!plan.tiers || plan.tiers.length === 0));
+
+        if (isSubscriptionPlan) {
           priceDisplay = plan.price != null ? parseFloat(plan.price).toFixed(3) : '0.000';
+          durationLabel = 'Subscription';
           if (plan.start_date && plan.end_date) {
             const from = new Date(plan.start_date);
             const to = new Date(plan.end_date);
             const diffDays = Math.round((to - from) / (1000 * 60 * 60 * 24));
             durationLabel = diffDays > 0 ? `${diffDays} Days` : 'Fixed Period';
-            featuresArr = [plan.vehicle_type || '4-Wheeler', `Valid ${from.toLocaleDateString('en-GB')} – ${to.toLocaleDateString('en-GB')}`, 'Unlimited Entries', 'Digital Receipt'];
+            featuresArr = [plan.vehicle_type || '4-Wheeler', `Valid ${from.toLocaleDateString('en-GB')} \u2013 ${to.toLocaleDateString('en-GB')}`, 'Unlimited Entries', 'Digital Receipt'];
           } else {
-            featuresArr = [plan.vehicle_type || '4-Wheeler', 'Monthly Access', 'Unlimited Entries', 'Digital Receipt'];
+            featuresArr = [plan.vehicle_type || '4-Wheeler', plan.pricing_type, 'Unlimited Entries', 'Digital Receipt'];
           }
         } else if (plan.tiers && plan.tiers.length > 0) {
-          // Visitor Parking: use first tier price and show tiers as features
+          // Visitor Parking tier-based plan: use first tier price, show all tiers as features
           priceDisplay = parseFloat(plan.tiers[0].price_omr).toFixed(3);
           durationLabel = `${plan.tiers[0].duration} ${plan.tiers[0].unit}${plan.tiers[0].duration > 1 ? 's' : ''}`;
           featuresArr = [
             plan.vehicle_type || '4-Wheeler',
-            ...plan.tiers.map(t => `${t.duration} ${t.unit} — OMR ${parseFloat(t.price_omr).toFixed(3)}`),
+            ...plan.tiers.map(t => `${t.duration} ${t.unit} \u2014 OMR ${parseFloat(t.price_omr).toFixed(3)}`),
             'Digital Receipt'
           ];
+        } else if (plan.price > 0) {
+          // Fallback: any plan with a flat price but unrecognised type
+          priceDisplay = parseFloat(plan.price).toFixed(3);
+          featuresArr = [plan.vehicle_type || '4-Wheeler', plan.pricing_type, 'Digital Receipt'];
         }
 
         return {
