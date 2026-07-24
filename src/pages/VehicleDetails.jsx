@@ -48,6 +48,8 @@ const VehicleDetails = () => {
   const [paymentGatewayData, setPaymentGatewayData] = useState({ cardNumber: '', expiry: '', cvv: '', name: '' });
   const [paymentGatewayError, setPaymentGatewayError] = useState('');
   const [qrPaymentType, setQrPaymentType] = useState('onDemand'); // 'onDemand' | 'monthlyPass'
+  const [pricingPlans, setPricingPlans] = useState([]);
+  const [pricingLoading, setPricingLoading] = useState(false);
 
   useEffect(() => {
     const fetchLocations = async () => {
@@ -62,6 +64,25 @@ const VehicleDetails = () => {
       }
     };
     fetchLocations();
+  }, []);
+
+  // Fetch pricing plans from /api/pricing/ for Monthly Pass slot grid
+  useEffect(() => {
+    const fetchPricingPlans = async () => {
+      setPricingLoading(true);
+      try {
+        const response = await fetch(apiUrl('/api/pricing/'));
+        if (response.ok) {
+          const data = await response.json();
+          setPricingPlans(data.filter(p => p.is_active));
+        }
+      } catch (err) {
+        console.error('Error fetching pricing plans:', err);
+      } finally {
+        setPricingLoading(false);
+      }
+    };
+    fetchPricingPlans();
   }, []);
 
   useEffect(() => {
@@ -260,11 +281,67 @@ const VehicleDetails = () => {
     setPaymentStep(nextStep);
   };
 
-  const MONTHLY_PASS_SLOTS = [
-    { id: 'daily', label: 'Daily Pass', duration: '1 Day', price: '1.500', features: ['24hr Access', 'Single Entry/Exit', 'Digital Receipt'], color: 'from-blue-500 to-blue-600' },
-    { id: 'weekly', label: 'Weekly Pass', duration: '7 Days', price: '8.000', features: ['7-Day Access', 'Unlimited Entries', 'Priority Slot', 'Digital Receipt'], color: 'from-purple-500 to-purple-600', popular: true },
-    { id: 'monthly', label: 'Monthly Pass', duration: '30 Days', price: '25.000', features: ['30-Day Access', 'Unlimited Entries', 'Reserved Slot', 'SMS Alerts', 'Digital Receipt'], color: 'from-amber-500 to-orange-500' },
+  // Slot colors palette cycling by index
+  const SLOT_COLORS = [
+    'from-blue-500 to-blue-600',
+    'from-purple-500 to-purple-600',
+    'from-amber-500 to-orange-500',
+    'from-green-500 to-emerald-600',
+    'from-rose-500 to-pink-600',
+    'from-cyan-500 to-sky-600',
   ];
+
+  // Derive monthly pass slot cards from live API pricing data
+  const MONTHLY_PASS_SLOTS = pricingPlans.length > 0
+    ? pricingPlans.map((plan, idx) => {
+        // Build duration label: Tenant Subscription plans use start_date/end_date or price directly
+        // Visitor Parking plans use their tiers
+        let durationLabel = plan.pricing_type === 'Tenant Subscription' ? 'Subscription' : 'Timed';
+        let priceDisplay = '0.000';
+        let featuresArr = [plan.pricing_type, plan.vehicle_type || '4-Wheeler', 'Digital Receipt'];
+
+        if (plan.pricing_type === 'Tenant Subscription') {
+          priceDisplay = plan.price != null ? parseFloat(plan.price).toFixed(3) : '0.000';
+          if (plan.start_date && plan.end_date) {
+            const from = new Date(plan.start_date);
+            const to = new Date(plan.end_date);
+            const diffDays = Math.round((to - from) / (1000 * 60 * 60 * 24));
+            durationLabel = diffDays > 0 ? `${diffDays} Days` : 'Fixed Period';
+            featuresArr = [plan.vehicle_type || '4-Wheeler', `Valid ${from.toLocaleDateString('en-GB')} – ${to.toLocaleDateString('en-GB')}`, 'Unlimited Entries', 'Digital Receipt'];
+          } else {
+            featuresArr = [plan.vehicle_type || '4-Wheeler', 'Monthly Access', 'Unlimited Entries', 'Digital Receipt'];
+          }
+        } else if (plan.tiers && plan.tiers.length > 0) {
+          // Visitor Parking: use first tier price and show tiers as features
+          priceDisplay = parseFloat(plan.tiers[0].price_omr).toFixed(3);
+          durationLabel = `${plan.tiers[0].duration} ${plan.tiers[0].unit}${plan.tiers[0].duration > 1 ? 's' : ''}`;
+          featuresArr = [
+            plan.vehicle_type || '4-Wheeler',
+            ...plan.tiers.map(t => `${t.duration} ${t.unit} — OMR ${parseFloat(t.price_omr).toFixed(3)}`),
+            'Digital Receipt'
+          ];
+        }
+
+        return {
+          id: plan.id,
+          apiId: plan.id,
+          label: plan.name,
+          duration: durationLabel,
+          price: priceDisplay,
+          features: featuresArr,
+          color: SLOT_COLORS[idx % SLOT_COLORS.length],
+          popular: idx === 1, // mark second plan as popular
+          pricingType: plan.pricing_type,
+          rawPlan: plan,
+        };
+      })
+    : [
+        // Fallback hardcoded slots if API hasn't loaded yet
+        { id: 'daily', label: 'Daily Pass', duration: '1 Day', price: '1.500', features: ['24hr Access', 'Single Entry/Exit', 'Digital Receipt'], color: 'from-blue-500 to-blue-600' },
+        { id: 'weekly', label: 'Weekly Pass', duration: '7 Days', price: '8.000', features: ['7-Day Access', 'Unlimited Entries', 'Priority Slot', 'Digital Receipt'], color: 'from-purple-500 to-purple-600', popular: true },
+        { id: 'monthly', label: 'Monthly Pass', duration: '30 Days', price: '25.000', features: ['30-Day Access', 'Unlimited Entries', 'Reserved Slot', 'SMS Alerts', 'Digital Receipt'], color: 'from-amber-500 to-orange-500' },
+      ];
+
 
   const calculateParkingFee = (vehicle) => {
     if (!vehicle || !vehicle.entryTime || vehicle.type === 'Staff' || vehicle.paymentStatus === 'waived' || vehicle.hasActiveSubscription) return '0.000';
@@ -1251,7 +1328,18 @@ const VehicleDetails = () => {
                   </div>
 
                   <div className="space-y-3">
-                    {MONTHLY_PASS_SLOTS.map(slot => (
+                    {pricingLoading ? (
+                      <div className="flex flex-col items-center py-8 gap-3">
+                        <div className="w-10 h-10 rounded-full border-4 border-t-purple-600 border-r-purple-600 border-b-transparent border-l-transparent animate-spin"></div>
+                        <p className="text-sm text-gray-400 font-bold">Loading plans from server…</p>
+                      </div>
+                    ) : MONTHLY_PASS_SLOTS.length === 0 ? (
+                      <div className="text-center py-8">
+                        <p className="text-gray-400 text-sm font-bold">No active pricing plans found.</p>
+                        <p className="text-gray-300 text-xs mt-1">Please configure pricing plans in the Pricing section.</p>
+                      </div>
+                    ) : (
+                    MONTHLY_PASS_SLOTS.map(slot => (
                       <button
                         key={slot.id}
                         className={`w-full p-4 rounded-2xl border-2 text-left transition-all relative overflow-hidden group ${
@@ -1289,7 +1377,7 @@ const VehicleDetails = () => {
                           )}
                         </div>
                       </button>
-                    ))}
+                    )))}
                   </div>
 
                   <button
