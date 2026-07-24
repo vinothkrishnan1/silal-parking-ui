@@ -49,6 +49,7 @@ const VehicleDetails = () => {
   const [paymentGatewayError, setPaymentGatewayError] = useState('');
   const [qrPaymentType, setQrPaymentType] = useState('onDemand'); // 'onDemand' | 'monthlyPass'
   const [purchaseCustomerName, setPurchaseCustomerName] = useState('');
+  const [purchaseCustomerPhone, setPurchaseCustomerPhone] = useState('');
   const [pricingPlans, setPricingPlans] = useState([]);
   const [pricingLoading, setPricingLoading] = useState(false);
 
@@ -123,6 +124,79 @@ const VehicleDetails = () => {
     }
     return () => clearTimeout(timer);
   }, [showScanModal, paymentStep]);
+
+  // Create Visitor Subscription on backend when purchase payment completes
+  useEffect(() => {
+    if (paymentStep === 'purchaseProcessing' && selectedSlot) {
+      let isMounted = true;
+      const processPurchase = async () => {
+        try {
+          const customerName = purchaseCustomerName.trim() || paymentGatewayData.name.trim() || 'Visitor Customer';
+          const customerPhone = purchaseCustomerPhone.trim().length === 8 ? purchaseCustomerPhone.trim() : '90000000';
+          const vehiclePlate = scannedVehicleData?.vehicleNumber || scanVehicleInput.trim() || 'ABC 1234';
+          const locId = (selectedLocation && selectedLocation !== 'all')
+            ? selectedLocation
+            : (locations.length > 0 ? locations[0].id.toString() : '1');
+
+          const today = new Date();
+          const todayStr = today.toISOString().slice(0, 10);
+          
+          let endDate = new Date(today);
+          let durVal = selectedSlot.rawPlan?.duration_value || 30;
+          let durUnit = selectedSlot.rawPlan?.duration_unit || 'Days';
+
+          if (selectedSlot.id === 'daily') { durVal = 1; durUnit = 'Days'; }
+          else if (selectedSlot.id === 'weekly') { durVal = 7; durUnit = 'Days'; }
+          else if (selectedSlot.id === 'monthly') { durVal = 30; durUnit = 'Days'; }
+
+          if (durUnit === 'Months') {
+            endDate.setMonth(endDate.getMonth() + Number(durVal));
+          } else {
+            endDate.setDate(endDate.getDate() + Number(durVal));
+          }
+          const endDateStr = endDate.toISOString().slice(0, 10);
+
+          const payload = {
+            visitor_name: customerName,
+            phone_number: customerPhone,
+            location_id: locId,
+            vehicles: [vehiclePlate],
+            start_date: todayStr,
+            end_date: endDateStr,
+            allocated_slots: 1,
+            subscription_plan_id: selectedSlot.apiId || (typeof selectedSlot.id === 'number' ? selectedSlot.id : null),
+            amount_paid: selectedSlot.price,
+            payment_method: 'Card',
+            payment_status: 'Paid',
+            payment_date: todayStr,
+            status: 'active'
+          };
+
+          const response = await fetch(apiUrl('/api/visitors/subscriptions/'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+
+          if (response.ok) {
+            window.dispatchEvent(new CustomEvent('visitor-master-updated'));
+          } else {
+            const errJson = await response.json();
+            console.error('Subscription API creation error:', errJson);
+          }
+        } catch (err) {
+          console.error('Error auto-creating subscription:', err);
+        } finally {
+          setTimeout(() => {
+            if (isMounted) setPaymentStep('slotPurchaseReceipt');
+          }, 1500);
+        }
+      };
+
+      processPurchase();
+      return () => { isMounted = false; };
+    }
+  }, [paymentStep]);
 
   useEffect(() => {
     const timer = setInterval(() => setTick(t => t + 1), 60000);
@@ -230,6 +304,7 @@ const VehicleDetails = () => {
     setPaymentGatewayData({ cardNumber: '', expiry: '', cvv: '', name: '' });
     setPaymentGatewayError('');
     setPurchaseCustomerName('');
+    setPurchaseCustomerPhone('');
   };
 
   const handleQrScanSimulate = () => {
@@ -1724,32 +1799,24 @@ const VehicleDetails = () => {
               )}
 
               {/* Purchase Processing */}
-              {paymentStep === 'purchaseProcessing' && (() => {
-                const validFrom = new Date();
-                const validUntil = new Date();
-                if (selectedSlot?.id === 'daily') validUntil.setDate(validUntil.getDate() + 1);
-                else if (selectedSlot?.id === 'weekly') validUntil.setDate(validUntil.getDate() + 7);
-                else validUntil.setDate(validUntil.getDate() + 30);
-                setTimeout(() => setPaymentStep('slotPurchaseReceipt'), 2500);
-                return (
-                  <div className="flex flex-col items-center py-10 gap-6">
-                    <div className="relative w-24 h-24">
-                      <div className="absolute inset-0 rounded-full border-4 border-gray-100"></div>
-                      <div className="absolute inset-0 rounded-full border-4 border-t-purple-600 border-r-purple-600 border-b-transparent border-l-transparent animate-spin"></div>
-                      <div className="absolute inset-3 rounded-full bg-purple-50 flex items-center justify-center">
-                        <ShoppingBag size={24} className="text-purple-600" />
-                      </div>
-                    </div>
-                    <div className="text-center">
-                      <h4 className="font-black text-gray-800 text-lg">Activating Your Pass…</h4>
-                      <p className="text-gray-400 text-sm mt-1">Registering vehicle and slot details.</p>
-                    </div>
-                    <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
-                      <div className="h-full bg-gradient-to-r from-purple-600 to-indigo-600 rounded-full animate-pulse" style={{ width: '60%' }}></div>
+              {paymentStep === 'purchaseProcessing' && (
+                <div className="flex flex-col items-center py-10 gap-6">
+                  <div className="relative w-24 h-24">
+                    <div className="absolute inset-0 rounded-full border-4 border-gray-100"></div>
+                    <div className="absolute inset-0 rounded-full border-4 border-t-purple-600 border-r-purple-600 border-b-transparent border-l-transparent animate-spin"></div>
+                    <div className="absolute inset-3 rounded-full bg-purple-50 flex items-center justify-center">
+                      <ShoppingBag size={24} className="text-purple-600" />
                     </div>
                   </div>
-                );
-              })()}
+                  <div className="text-center">
+                    <h4 className="font-black text-gray-800 text-lg">Activating Your Pass…</h4>
+                    <p className="text-gray-400 text-sm mt-1">Registering vehicle and slot details.</p>
+                  </div>
+                  <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-purple-600 to-indigo-600 rounded-full animate-pulse" style={{ width: '60%' }}></div>
+                  </div>
+                </div>
+              )}
 
               {/* Slot Purchase Receipt */}
               {paymentStep === 'slotPurchaseReceipt' && selectedSlot && (() => {
