@@ -45,7 +45,39 @@ const Reports = () => {
   const [sortDirection, setSortDirection] = useState('desc');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [tick, setTick] = useState(0); // for live duration updates
+  const [columnFilters, setColumnFilters] = useState({
+    vehicleNumber: '',
+    entryDate: '',
+    exitDate: '',
+    type: 'all',
+    location: 'all',
+    status: 'all',
+    duration: 'all',
+    paymentMethod: 'all',
+    amount: 'all'
+  });
+
+  const handleColumnFilterChange = (field, value) => {
+    setColumnFilters(prev => ({ ...prev, [field]: value }));
+    setCurrentPage(1);
+  };
+
+  const resetAllFilters = () => {
+    setDateRange({ start: '', end: '' });
+    setSearchTerm('');
+    setColumnFilters({
+      vehicleNumber: '',
+      entryDate: '',
+      exitDate: '',
+      type: 'all',
+      location: 'all',
+      status: 'all',
+      duration: 'all',
+      paymentMethod: 'all',
+      amount: 'all'
+    });
+    setCurrentPage(1);
+  };
 
   const fetchReports = async () => {
     try {
@@ -81,7 +113,59 @@ const Reports = () => {
     else { setSortField(field); setSortDirection('asc'); }
   };
 
-  const filteredData = reportData.sort((a, b) => {
+  const processedData = reportData.filter(vehicle => {
+    if (columnFilters.vehicleNumber && !vehicle.vehicleNumber?.toLowerCase().includes(columnFilters.vehicleNumber.toLowerCase())) {
+      return false;
+    }
+    if (columnFilters.entryDate && vehicle.entryTime) {
+      const entryDateStr = parseBackendDate(vehicle.entryTime).toISOString().slice(0, 10);
+      if (entryDateStr !== columnFilters.entryDate) return false;
+    }
+    if (columnFilters.exitDate) {
+      if (!vehicle.exitTime) return false;
+      const exitDateStr = parseBackendDate(vehicle.exitTime).toISOString().slice(0, 10);
+      if (exitDateStr !== columnFilters.exitDate) return false;
+    }
+    if (columnFilters.type !== 'all') {
+      if ((vehicle.type || '').toLowerCase() !== columnFilters.type.toLowerCase()) return false;
+    }
+    if (columnFilters.location !== 'all') {
+      const locName = vehicle.location || '';
+      if (locName !== columnFilters.location && String(vehicle.location_id) !== String(columnFilters.location)) return false;
+    }
+    if (columnFilters.status !== 'all') {
+      const isExited = !!vehicle.exitTime;
+      if (columnFilters.status === 'Inside' && isExited) return false;
+      if (columnFilters.status === 'Exited' && !isExited) return false;
+    }
+    if (columnFilters.duration !== 'all') {
+      const entry = parseBackendDate(vehicle.entryTime);
+      const exit = vehicle.exitTime ? parseBackendDate(vehicle.exitTime) : new Date();
+      const diffMins = Math.max(0, Math.floor((exit - entry) / (1000 * 60)));
+
+      if (columnFilters.duration === 'under15' && diffMins >= 15) return false;
+      if (columnFilters.duration === 'under1h' && diffMins >= 60) return false;
+      if (columnFilters.duration === '1to4h' && (diffMins < 60 || diffMins > 240)) return false;
+      if (columnFilters.duration === 'over4h' && diffMins <= 240) return false;
+    }
+    if (columnFilters.paymentMethod !== 'all') {
+      const method = (vehicle.paymentMethod || '').toLowerCase();
+      const targetMethod = columnFilters.paymentMethod.toLowerCase();
+      if (targetMethod === 'waiver') {
+        if (!method.includes('waiver') && !method.includes('waived')) return false;
+      } else if (!method.includes(targetMethod)) {
+        return false;
+      }
+    }
+    if (columnFilters.amount !== 'all') {
+      const amtNum = parseFloat(vehicle.paymentAmount || 0);
+      if (columnFilters.amount === 'free' && amtNum > 0) return false;
+      if (columnFilters.amount === 'paid' && amtNum <= 0) return false;
+    }
+    return true;
+  });
+
+  const filteredData = [...processedData].sort((a, b) => {
     let valueA, valueB;
     if (sortField === 'entryTime' || sortField === 'exitTime') {
       valueA = a[sortField] ? parseBackendDate(a[sortField]).getTime() : 0;
@@ -104,7 +188,7 @@ const Reports = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, dateRange, sortField, sortDirection]);
+  }, [searchTerm, dateRange, columnFilters, sortField, sortDirection]);
 
   const handleDownload = (format) => {
     let content = "";
@@ -258,7 +342,7 @@ const Reports = () => {
               </div>
             </div>
             <div className="flex items-end">
-              <button className="ripple-button w-full px-4 py-3 bg-gray-900 text-white rounded-xl hover:bg-black flex items-center justify-center focus:outline-none transition-all font-bold text-sm shadow-md active:scale-95" onClick={() => { setDateRange({ start: '', end: '' }); setSearchTerm(''); }}>
+              <button className="ripple-button w-full px-4 py-3 bg-gray-900 text-white rounded-xl hover:bg-black flex items-center justify-center focus:outline-none transition-all font-bold text-sm shadow-md active:scale-95" onClick={resetAllFilters}>
                 <Filter size={18} className={`${language === 'ar' ? 'ml-2' : 'mr-2'}`} />
                 {language === 'ar' ? 'إعادة ضبط الفلاتر' : 'Reset Filters'}
               </button>
@@ -289,6 +373,116 @@ const Reports = () => {
                 </th>
                 <th scope="col" className={`px-6 py-5 ${language === 'ar' ? 'text-right' : 'text-left'} text-[11px] font-black text-gray-400 uppercase tracking-widest cursor-pointer hover:text-premium-gold transition-colors`} onClick={() => handleSort('paymentAmount')}>
                   <div className={`flex items-center ${language === 'ar' ? 'flex-row-reverse' : ''}`}>{language === 'ar' ? 'المبلغ (ر.ع.)' : 'Amount (OMR)'}{sortField === 'paymentAmount' && <span className={`${language === 'ar' ? 'mr-1' : 'ml-1'} text-premium-gold`}><ArrowUp size={14} className={sortDirection === 'desc' ? 'rotate-180 transition-transform' : 'transition-transform'} /></span>}</div>
+                </th>
+              </tr>
+              {/* Column Filters Row */}
+              <tr className="bg-gray-100/70 border-t border-b border-gray-200/70">
+                {/* Vehicle Number */}
+                <th className="p-2">
+                  <input
+                    type="text"
+                    placeholder={language === 'ar' ? 'فلترة الرقم...' : 'Filter plate...'}
+                    value={columnFilters.vehicleNumber}
+                    onChange={(e) => handleColumnFilterChange('vehicleNumber', e.target.value)}
+                    className="w-full px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-bold text-gray-800 focus:outline-none focus:ring-1 focus:ring-premium-gold shadow-sm"
+                  />
+                </th>
+                {/* Entry Date */}
+                <th className="p-2">
+                  <input
+                    type="date"
+                    value={columnFilters.entryDate}
+                    onChange={(e) => handleColumnFilterChange('entryDate', e.target.value)}
+                    className="w-full px-2 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-bold text-gray-800 focus:outline-none focus:ring-1 focus:ring-premium-gold shadow-sm"
+                  />
+                </th>
+                {/* Exit Date */}
+                <th className="p-2">
+                  <input
+                    type="date"
+                    value={columnFilters.exitDate}
+                    onChange={(e) => handleColumnFilterChange('exitDate', e.target.value)}
+                    className="w-full px-2 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-bold text-gray-800 focus:outline-none focus:ring-1 focus:ring-premium-gold shadow-sm"
+                  />
+                </th>
+                {/* Type */}
+                <th className="p-2">
+                  <select
+                    value={columnFilters.type}
+                    onChange={(e) => handleColumnFilterChange('type', e.target.value)}
+                    className="w-full px-2 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-bold text-gray-800 focus:outline-none focus:ring-1 focus:ring-premium-gold shadow-sm cursor-pointer"
+                  >
+                    <option value="all">{language === 'ar' ? 'الكل' : 'All Types'}</option>
+                    <option value="Visitor">{language === 'ar' ? 'زائر' : 'Visitor'}</option>
+                    <option value="Staff">{language === 'ar' ? 'موظف' : 'Staff'}</option>
+                    <option value="Tenant">{language === 'ar' ? 'مستأجر' : 'Tenant'}</option>
+                  </select>
+                </th>
+                {/* Location */}
+                <th className="p-2">
+                  <select
+                    value={columnFilters.location}
+                    onChange={(e) => handleColumnFilterChange('location', e.target.value)}
+                    className="w-full px-2 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-bold text-gray-800 focus:outline-none focus:ring-1 focus:ring-premium-gold shadow-sm cursor-pointer"
+                  >
+                    <option value="all">{language === 'ar' ? 'الكل' : 'All Locations'}</option>
+                    {locations.map((loc) => (
+                      <option key={loc.id} value={loc.location_name}>
+                        {loc.location_name}
+                      </option>
+                    ))}
+                  </select>
+                </th>
+                {/* Status */}
+                <th className="p-2">
+                  <select
+                    value={columnFilters.status}
+                    onChange={(e) => handleColumnFilterChange('status', e.target.value)}
+                    className="w-full px-2 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-bold text-gray-800 focus:outline-none focus:ring-1 focus:ring-premium-gold shadow-sm cursor-pointer"
+                  >
+                    <option value="all">{language === 'ar' ? 'الكل' : 'All Statuses'}</option>
+                    <option value="Inside">{language === 'ar' ? 'بالداخل' : 'Inside'}</option>
+                    <option value="Exited">{language === 'ar' ? 'خرج' : 'Exited'}</option>
+                  </select>
+                </th>
+                {/* Duration */}
+                <th className="p-2">
+                  <select
+                    value={columnFilters.duration}
+                    onChange={(e) => handleColumnFilterChange('duration', e.target.value)}
+                    className="w-full px-2 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-bold text-gray-800 focus:outline-none focus:ring-1 focus:ring-premium-gold shadow-sm cursor-pointer"
+                  >
+                    <option value="all">{language === 'ar' ? 'الكل' : 'All Durations'}</option>
+                    <option value="under15">&lt; 15 mins</option>
+                    <option value="under1h">&lt; 1 hour</option>
+                    <option value="1to4h">1 - 4 hours</option>
+                    <option value="over4h">&gt; 4 hours</option>
+                  </select>
+                </th>
+                {/* Payment Method */}
+                <th className="p-2">
+                  <select
+                    value={columnFilters.paymentMethod}
+                    onChange={(e) => handleColumnFilterChange('paymentMethod', e.target.value)}
+                    className="w-full px-2 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-bold text-gray-800 focus:outline-none focus:ring-1 focus:ring-premium-gold shadow-sm cursor-pointer"
+                  >
+                    <option value="all">{language === 'ar' ? 'الكل' : 'All Methods'}</option>
+                    <option value="Cash">{language === 'ar' ? 'نقدي' : 'Cash'}</option>
+                    <option value="Card">{language === 'ar' ? 'بطاقة' : 'Card'}</option>
+                    <option value="Waiver">{language === 'ar' ? 'إعفاء' : 'Waiver'}</option>
+                  </select>
+                </th>
+                {/* Amount */}
+                <th className="p-2">
+                  <select
+                    value={columnFilters.amount}
+                    onChange={(e) => handleColumnFilterChange('amount', e.target.value)}
+                    className="w-full px-2 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-bold text-gray-800 focus:outline-none focus:ring-1 focus:ring-premium-gold shadow-sm cursor-pointer"
+                  >
+                    <option value="all">{language === 'ar' ? 'الكل' : 'All Amounts'}</option>
+                    <option value="free">{language === 'ar' ? 'مجاني / N/A' : 'Free / N/A'}</option>
+                    <option value="paid">{language === 'ar' ? 'مدفوع' : 'Paid (> 0)'}</option>
+                  </select>
                 </th>
               </tr>
             </thead>
