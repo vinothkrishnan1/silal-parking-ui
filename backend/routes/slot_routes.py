@@ -1,7 +1,5 @@
 from flask import Blueprint, jsonify, request
 from models import Vehicle, Tenant, ParkingSettings, Location, db
-from datetime import datetime
-
 slot_bp = Blueprint('slot_bp', __name__)
 
 @slot_bp.route('/list-slot-details', methods=['GET'])
@@ -17,9 +15,9 @@ def list_slot_details():
                 db.session.add(settings)
                 db.session.commit()
             
-            total_visitor_staff = settings.total_visitor_slots
+            master_visitor_total = settings.total_visitor_slots or 0
             visitor_reserved = settings.visitor_reserved or 0
-            total_tenant = settings.total_tenant_slots
+            total_tenant = settings.total_tenant_slots or 0
             tenant_reserved = settings.tenant_reserved or 0
             
             base_vehicle_query = Vehicle.query.filter_by(location_id=location_id)
@@ -41,28 +39,70 @@ def list_slot_details():
                 settings_to_sum = [settings]
                 base_vehicle_query = Vehicle.query.filter(Vehicle.location_id.in_(active_location_ids)) if active_location_ids else Vehicle.query.filter(False)
             
-            total_visitor_staff = sum(s.total_visitor_slots for s in settings_to_sum)
-            total_tenant = sum(s.total_tenant_slots for s in settings_to_sum)
+            master_visitor_total = sum((s.total_visitor_slots or 0) for s in settings_to_sum)
             visitor_reserved = sum((s.visitor_reserved or 0) for s in settings_to_sum)
+            total_tenant = sum((s.total_tenant_slots or 0) for s in settings_to_sum)
             tenant_reserved = sum((s.tenant_reserved or 0) for s in settings_to_sum)
             
+        # Dynamic capacities
+        from models import WaivedUser, VisitorSubscription, SUBSCRIPTION_STATUS_ACTIVE, VisitorVehicle
+        from datetime import datetime
+        from sqlalchemy import or_
+        today = datetime.utcnow().date()
+        
         # Dynamic count
-        occupied_visitor_staff = base_vehicle_query.filter(
-            Vehicle.status == 'in',
-            Vehicle.vehicle_category.in_(['Visitor', 'Staff'])
-        ).count()
-        available_visitor_staff = max(0, total_visitor_staff - occupied_visitor_staff - visitor_reserved)
+        occupied_staff = base_vehicle_query.filter_by(status='in', vehicle_category='Staff').count()
+        
+        visitor_vehicles_in = base_vehicle_query.filter(Vehicle.status == 'in', Vehicle.vehicle_category == 'Visitor').all()
+        
+        occupied_visitor = 0
+        occupied_visitor_sub = 0
+        for v in visitor_vehicles_in:
+            vv = VisitorVehicle.query.filter_by(license_plate=v.license_plate).first()
+            has_sub = False
+            if vv:
+                active_sub = VisitorSubscription.query.filter(
+                    VisitorSubscription.visitor_id == vv.visitor_id,
+                    VisitorSubscription.status == SUBSCRIPTION_STATUS_ACTIVE,
+                    VisitorSubscription.start_date <= today,
+                    VisitorSubscription.end_date >= today
+                ).first()
+                if active_sub:
+                    has_sub = True
+                    
+            if has_sub:
+                occupied_visitor_sub += 1
+            else:
+                occupied_visitor += 1
+                
+        total_global = master_visitor_total
+        occupied_global = occupied_visitor + occupied_staff + occupied_visitor_sub
+        available_global = max(0, total_global - occupied_global - visitor_reserved)
         
         occupied_tenant = base_vehicle_query.filter_by(status='in', vehicle_category='Tenant').count()
         available_tenant = max(0, total_tenant - occupied_tenant - tenant_reserved)
         
         return jsonify({
             'visitor': {
-                'total': total_visitor_staff,
-                'occupied': occupied_visitor_staff,
+                'total': total_global,
+                'occupied': occupied_visitor,
                 'reserved': visitor_reserved,
-                'available': available_visitor_staff,
-                'occupancy_rate': round((occupied_visitor_staff / total_visitor_staff * 100), 1) if total_visitor_staff > 0 else 0
+                'available': available_global,
+                'occupancy_rate': round((occupied_visitor / total_global * 100), 1) if total_global > 0 else 0
+            },
+            'staff': {
+                'total': total_global,
+                'occupied': occupied_staff,
+                'reserved': visitor_reserved,
+                'available': available_global,
+                'occupancy_rate': round((occupied_staff / total_global * 100), 1) if total_global > 0 else 0
+            },
+            'visitor_sub': {
+                'total': total_global,
+                'occupied': occupied_visitor_sub,
+                'reserved': visitor_reserved,
+                'available': available_global,
+                'occupancy_rate': round((occupied_visitor_sub / total_global * 100), 1) if total_global > 0 else 0
             },
             'tenant': {
                 'total': total_tenant,
@@ -72,10 +112,10 @@ def list_slot_details():
                 'occupancy_rate': round((occupied_tenant / total_tenant * 100), 1) if total_tenant > 0 else 0
             },
             'overall': {
-                'total': total_visitor_staff + total_tenant,
-                'occupied': occupied_visitor_staff + occupied_tenant,
+                'total': total_global + total_tenant,
+                'occupied': occupied_global + occupied_tenant,
                 'reserved': visitor_reserved + tenant_reserved,
-                'available': available_visitor_staff + available_tenant
+                'available': available_global + available_tenant
             }
         }), 200
     except Exception as e:
@@ -108,6 +148,7 @@ def update_settings():
             settings.total_visitor_slots = int(data['total_visitor_slots'])
         if 'total_tenant_slots' in data:
             settings.total_tenant_slots = int(data['total_tenant_slots'])
+            
         if 'visitor_reserved' in data:
             settings.visitor_reserved = int(data['visitor_reserved'])
         if 'tenant_reserved' in data:

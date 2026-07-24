@@ -134,18 +134,17 @@ const SlotManagement = () => {
     );
   }
 
-  const SlotCard = ({ title, data, icon, themeAccent, subtitle }) => {
+  const SlotCard = ({ title, data, icon, themeAccent, subtitle, hideTotalAndAvailable = false }) => {
     if (!data) return null;
 
-    const total = data.total || 1;
-    const reservedWidth = Math.min(100, (data.reserved / total) * 100);
-    const occupancyRate = data.occupancy_rate || 0;
-
     const isDark = themeAccent === 'dark';
-    const accentColor = isDark ? 'text-[#121212]' : 'text-[#c6a87c]';
     const bgAccent = isDark ? 'bg-[#121212]' : 'bg-[#c6a87c]';
-    const lightBgAccent = isDark ? 'bg-[#121212]/10' : 'bg-[#c6a87c]/15';
+    const lightBgAccent = isDark ? 'bg-gray-100' : 'bg-[#f4efe8]';
+    const accentColor = isDark ? 'text-[#121212]' : 'text-[#c6a87c]';
     const groupHoverColor = isDark ? 'group-hover:text-[#121212]' : 'group-hover:text-[#c6a87c]';
+
+    const occupancyRate = data.occupancy_rate || 0;
+    const reservedWidth = data.total > 0 ? ((data.reserved || 0) / data.total) * 100 : 0;
 
     return (
       <div 
@@ -161,17 +160,21 @@ const SlotManagement = () => {
               <p className="text-xs text-gray-500 mt-1 font-medium">{subtitle}</p>
             </div>
           </div>
-          <div className="px-4 py-2 rounded-xl bg-white text-gray-700 text-sm font-bold border border-gray-100 shadow-sm">
-            {data.total} <span className="text-gray-400 font-semibold ml-1">{t('slotManagement.totalSlots')}</span>
-          </div>
+          {!hideTotalAndAvailable && (
+            <div className="px-4 py-2 rounded-xl bg-white text-gray-700 text-sm font-bold border border-gray-100 shadow-sm">
+              {data.total} <span className="text-gray-400 font-semibold ml-1">{t('slotManagement.totalSlots')}</span>
+            </div>
+          )}
         </div>
 
         <div className="p-8">
-          <div className="grid grid-cols-3 gap-6 mb-8">
-            <div className="text-center group-hover:bg-gray-50/80 p-4 rounded-xl transition-colors">
-              <p className="text-[11px] text-gray-400 uppercase tracking-wider font-bold mb-2">{t('slotManagement.available')}</p>
-              <p className={`text-3xl font-black ${groupHoverColor} transition-colors text-gray-800`}>{data.available}</p>
-            </div>
+          <div className={`grid ${hideTotalAndAvailable ? 'grid-cols-2' : 'grid-cols-3'} gap-6 mb-8`}>
+            {!hideTotalAndAvailable && (
+              <div className="text-center group-hover:bg-gray-50/80 p-4 rounded-xl transition-colors">
+                <p className="text-[11px] text-gray-400 uppercase tracking-wider font-bold mb-2">{t('slotManagement.available')}</p>
+                <p className={`text-3xl font-black ${groupHoverColor} transition-colors text-gray-800`}>{data.available}</p>
+              </div>
+            )}
             <div className="text-center group-hover:bg-gray-50/80 p-4 rounded-xl transition-colors relative">
               <p className="text-[11px] text-gray-400 uppercase tracking-wider font-bold mb-2">{t('slotManagement.occupied')}</p>
               <p className="text-3xl font-black text-gray-800">{data.occupied}</p>
@@ -266,13 +269,50 @@ const SlotManagement = () => {
         </div>
       </div>
 
-      <div className={`grid grid-cols-1 ${enableTenantSubscription ? 'lg:grid-cols-2' : 'lg:grid-cols-1'} gap-8`}>
+      {slotData && (
+        <div className="mb-8">
+          <SlotCard
+            title="Master Parking Pool"
+            subtitle="Global capacity for Visitors, Staff, and Monthly Passes"
+            data={{
+              total: slotData.visitor?.total || 0,
+              available: slotData.visitor?.available || 0,
+              occupied: (slotData.visitor?.occupied || 0) + (slotData.staff?.occupied || 0) + (slotData.visitor_sub?.occupied || 0),
+              reserved: (slotData.visitor?.reserved || 0) + (slotData.staff?.reserved || 0) + (slotData.visitor_sub?.reserved || 0),
+              occupancy_rate: (slotData.visitor?.total || 0) > 0 
+                ? (((slotData.visitor?.occupied || 0) + (slotData.staff?.occupied || 0) + (slotData.visitor_sub?.occupied || 0)) / slotData.visitor.total) * 100 
+                : 0
+            }}
+            icon={<Car size={22} />}
+            themeAccent="dark"
+          />
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
         <SlotCard
-          title={t('slotManagement.visitorStaffZone')}
-          subtitle={t('slotManagement.visitorStaffSubtitle')}
+          title="Visitor Zone"
+          subtitle="Pay on use parking"
           data={slotData.visitor}
           icon={<Users size={22} />}
           themeAccent="dark"
+          hideTotalAndAvailable={true}
+        />
+        <SlotCard
+          title="Staff Pass Zone"
+          subtitle="Staff parking"
+          data={slotData.staff}
+          icon={<Users size={22} />}
+          themeAccent="dark"
+          hideTotalAndAvailable={true}
+        />
+        <SlotCard
+          title="Monthly Pass Zone"
+          subtitle="Visitor subscriptions"
+          data={slotData.visitor_sub}
+          icon={<Users size={22} />}
+          themeAccent="dark"
+          hideTotalAndAvailable={true}
         />
         {enableTenantSubscription && (
           <SlotCard
@@ -303,12 +343,12 @@ const SlotManagement = () => {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-8 bg-white">
+            <form onSubmit={handleSubmit} className="p-8 bg-white h-auto max-h-[75vh] overflow-y-auto custom-scrollbar">
               <div className={`grid grid-cols-1 md:grid-cols-${enableTenantSubscription ? '2' : '1'} gap-10`}>
-                {/* Visitor & Staff Section */}
+                {/* Master Visitor Pool Section */}
                 <div className="space-y-6">
                   <div className={`flex items-center text-[#121212] text-sm font-black tracking-widest uppercase pb-3 border-b border-gray-100 ${language === 'ar' ? 'justify-end' : ''}`}>
-                    {t('slotManagement.visitorStaff')}
+                    Master Visitor Pool
                   </div>
                   <div className={language === 'ar' ? 'text-right' : 'text-left'}>
                     <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">{t('slotManagement.totalCapacity')}</label>

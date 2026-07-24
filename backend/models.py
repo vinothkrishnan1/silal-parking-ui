@@ -303,8 +303,10 @@ class ParkingSettings(db.Model):
     location_id = db.Column(db.Integer, db.ForeignKey('locations.id', ondelete="CASCADE"), nullable=True)
     total_visitor_slots = db.Column(db.Integer, default=100)
     total_tenant_slots = db.Column(db.Integer, default=100)
+    
     visitor_reserved = db.Column(db.Integer, default=0)
     tenant_reserved = db.Column(db.Integer, default=0)
+    
     visitor_occupied_override = db.Column(db.Integer, default=None)
     tenant_occupied_override = db.Column(db.Integer, default=None)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
