@@ -55,7 +55,12 @@ def list_slot_details():
             pass
 
         # Staff Pass Zone Dynamic Calculation
-        all_staff = WaivedUser.query.all()
+        if location_id and location_id != 'all':
+            staff_query = WaivedUser.query.filter(WaivedUser.location_id == location_id)
+        else:
+            staff_query = WaivedUser.query
+
+        all_staff = staff_query.all()
         active_staff_count = 0
         for staff in all_staff:
             if staff.valid_from and today < staff.valid_from:
@@ -68,11 +73,20 @@ def list_slot_details():
         reserved_staff = max(0, active_staff_count - occupied_staff)
 
         # Monthly Pass Zone (Visitor Subscription) Dynamic Calculation
-        active_vis_subs = VisitorSubscription.query.filter(
-            VisitorSubscription.status == SUBSCRIPTION_STATUS_ACTIVE,
-            VisitorSubscription.start_date <= today,
-            VisitorSubscription.end_date >= today
-        ).all()
+        if location_id and location_id != 'all':
+            vis_sub_query = VisitorSubscription.query.filter(
+                VisitorSubscription.location_id == location_id,
+                VisitorSubscription.status == SUBSCRIPTION_STATUS_ACTIVE,
+                VisitorSubscription.start_date <= today,
+                VisitorSubscription.end_date >= today
+            )
+        else:
+            vis_sub_query = VisitorSubscription.query.filter(
+                VisitorSubscription.status == SUBSCRIPTION_STATUS_ACTIVE,
+                VisitorSubscription.start_date <= today,
+                VisitorSubscription.end_date >= today
+            )
+        active_vis_subs = vis_sub_query.all()
         total_vis_sub_allocated = sum((sub.allocated_slots or 1) for sub in active_vis_subs)
 
         visitor_vehicles_in = base_vehicle_query.filter(Vehicle.status == 'in', Vehicle.vehicle_category == 'Visitor').all()
@@ -83,12 +97,15 @@ def list_slot_details():
             vv = VisitorVehicle.query.filter_by(license_plate=v.license_plate).first()
             has_sub = False
             if vv:
-                active_sub = VisitorSubscription.query.filter(
+                sub_q = VisitorSubscription.query.filter(
                     VisitorSubscription.visitor_id == vv.visitor_id,
                     VisitorSubscription.status == SUBSCRIPTION_STATUS_ACTIVE,
                     VisitorSubscription.start_date <= today,
                     VisitorSubscription.end_date >= today
-                ).first()
+                )
+                if location_id and location_id != 'all':
+                    sub_q = sub_q.filter(VisitorSubscription.location_id == location_id)
+                active_sub = sub_q.first()
                 if active_sub:
                     has_sub = True
                     
