@@ -267,6 +267,11 @@ def add_subscription():
                     db.session.add(new_veh)
                         
         db.session.commit()
+        try:
+            from services.parking_broadcast import broadcast_slot_status
+            broadcast_slot_status()
+        except Exception:
+            pass
         return jsonify(new_sub.to_dict()), 201
     except ValueError as e:
         db.session.rollback()
@@ -363,6 +368,11 @@ def update_subscription(id):
         sub.status = next_status
         
         db.session.commit()
+        try:
+            from services.parking_broadcast import broadcast_slot_status
+            broadcast_slot_status()
+        except Exception:
+            pass
         return jsonify(sub.to_dict()), 200
     except ValueError as e:
         db.session.rollback()
@@ -376,6 +386,11 @@ def delete_subscription(id):
     sub = VisitorSubscription.query.get_or_404(id)
     db.session.delete(sub)
     db.session.commit()
+    try:
+        from services.parking_broadcast import broadcast_slot_status
+        broadcast_slot_status()
+    except Exception:
+        pass
     return jsonify({"message": "Deleted"}), 200
 
 # --- Advanced Validation Route ---

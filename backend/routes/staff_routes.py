@@ -113,6 +113,11 @@ def create_staff():
 
         db.session.add(new_staff)
         db.session.commit()
+        try:
+            from services.parking_broadcast import broadcast_slot_status
+            broadcast_slot_status()
+        except Exception:
+            pass
         
         return jsonify({
             'message': 'Staff pass created successfully',
@@ -149,6 +154,12 @@ def update_staff(staff_id):
         staff.valid_until = parse_date_value(data.get('validUntil')) if 'validUntil' in data else staff.valid_until
 
         db.session.commit()
+        try:
+            from services.parking_broadcast import broadcast_slot_status
+            broadcast_slot_status()
+        except Exception:
+            pass
+
         return jsonify({
             'message': 'Staff pass updated successfully',
             'staffPass': serialize_staff_member(staff)
@@ -170,6 +181,12 @@ def delete_staff(staff_id):
 
         db.session.delete(staff)
         db.session.commit()
+        try:
+            from services.parking_broadcast import broadcast_slot_status
+            broadcast_slot_status()
+        except Exception:
+            pass
+
         return jsonify({'message': 'Staff pass deleted successfully'})
     except Exception as e:
         db.session.rollback()

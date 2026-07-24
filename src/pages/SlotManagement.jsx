@@ -361,17 +361,6 @@ const SlotManagement = () => {
                       onChange={(e) => handleIntegerFieldChange('total_visitor_slots', e.target.value)}
                     />
                   </div>
-                  <div className={language === 'ar' ? 'text-right' : 'text-left'}>
-                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">{t('slotManagement.reservedSlots')}</label>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      className="w-full px-4 py-3.5 bg-gray-50/50 border border-gray-100 rounded-xl focus:border-premium-gold focus:ring-2 focus:ring-premium-gold/30 focus:bg-white outline-none font-black text-lg transition-all text-gray-900 shadow-sm"
-                      value={formData.visitor_reserved}
-                      onChange={(e) => handleIntegerFieldChange('visitor_reserved', e.target.value)}
-                    />
-                  </div>
                 </div>
 
                 {/* Tenant Section */}

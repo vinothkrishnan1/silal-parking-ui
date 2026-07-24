@@ -65,3 +65,18 @@
 [2026-07-24 18:08:17] Payment exit state updated: plate=TN1239, vehicle_id=1, status=out, exit_time=2026-07-24T12:38:18
 [2026-07-24 18:08:17] Payment barrier trigger start: plate=TN1239, source_ip=None, gate_name=None, payment_status=paid
 [2026-07-24 18:08:17] Boom barrier failed to open for paid visitor: Plate=TN1239. Error: No boom barrier device configured for source_ip=None gate_name=None
+[2026-07-24 21:56:45] Payment exit state updated: plate=TN1234, vehicle_id=1, status=out, exit_time=2026-07-24T16:26:45
+[2026-07-24 21:56:45] Payment barrier trigger start: plate=TN1234, source_ip=None, gate_name=None, payment_status=paid
+[2026-07-24 21:56:45] Boom barrier failed to open for paid visitor: Plate=TN1234. Error: No boom barrier device configured for source_ip=None gate_name=None
+[2026-07-24 21:57:16] Payment exit state updated: plate=TN1235, vehicle_id=2, status=out, exit_time=2026-07-24T16:27:17
+[2026-07-24 21:57:16] Payment barrier trigger start: plate=TN1235, source_ip=None, gate_name=None, payment_status=paid
+[2026-07-24 21:57:16] Boom barrier failed to open for paid visitor: Plate=TN1235. Error: No boom barrier device configured for source_ip=None gate_name=None
+[2026-07-24 21:57:29] Payment exit state updated: plate=TN1236, vehicle_id=3, status=out, exit_time=2026-07-24T16:27:29
+[2026-07-24 21:57:29] Payment barrier trigger start: plate=TN1236, source_ip=None, gate_name=None, payment_status=paid
+[2026-07-24 21:57:29] Boom barrier failed to open for paid visitor: Plate=TN1236. Error: No boom barrier device configured for source_ip=None gate_name=None
+[2026-07-24 21:57:48] Payment exit state updated: plate=VDKJ3544, vehicle_id=5, status=out, exit_time=2026-07-24T16:27:48
+[2026-07-24 21:57:48] Payment barrier trigger start: plate=VDKJ3544, source_ip=None, gate_name=None, payment_status=waived
+[2026-07-24 21:57:48] Boom barrier failed to open for paid visitor: Plate=VDKJ3544. Error: No boom barrier device configured for source_ip=None gate_name=None
+[2026-07-24 21:57:55] Payment exit state updated: plate=TN2343, vehicle_id=6, status=out, exit_time=2026-07-24T16:27:56
+[2026-07-24 21:57:55] Payment barrier trigger start: plate=TN2343, source_ip=None, gate_name=None, payment_status=waived
+[2026-07-24 21:57:55] Boom barrier failed to open for paid visitor: Plate=TN2343. Error: No boom barrier device configured for source_ip=None gate_name=None

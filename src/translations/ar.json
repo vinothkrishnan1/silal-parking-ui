@@ -800,5 +800,29 @@
                                        "outOf":  "من",
                                        "deleteTitle":  "حذف الاشتراك",
                                        "deleteConfirm":  "هل أنت متأكد من حذف سجل الاشتراك؟ لا يمكن التراجع عن هذا الإجراء."
-                                   }
+                                   },
+    "slotManagement": {
+        "title": "إدارة الأماكن",
+        "subtitle": "تكوين ومراقبة توزيع مواقف السيارات",
+        "totalCapacity": "السعة الإجمالية",
+        "reservedSlots": "الأماكن المحجوزة",
+        "available": "المتاح",
+        "occupied": "المشغول",
+        "reserved": "المحجوز",
+        "totalSlots": "إجمالي الأماكن",
+        "occupancy": "نسبة الإشغال",
+        "realTimeMonitoring": "* المراقبة الفورية نشطة",
+        "updateAllocation": "تحديث التوزيع",
+        "updateModalTitle": "تحديث توزيع الأماكن",
+        "updateModalSubtitle": "إدارة السعة الإجمالية والأماكن المحجوزة",
+        "applyAllocation": "تطبيق التوزيع",
+        "tenant": "المستأجر",
+        "tenantZone": "منطقة المستأجرين",
+        "tenantSubtitle": "مواقف مخصصة للمستأجرين",
+        "loadingMetrics": "جارٍ تحميل مؤشرات المواقف...",
+        "connectionError": "خطأ في الاتصال",
+        "retryConnection": "إعادة المحاولة",
+        "updateError": "فشل في تحديث إعدادات الأماكن",
+        "connectionErrorMessage": "حدث خطأ في الاتصال"
+    }
 }

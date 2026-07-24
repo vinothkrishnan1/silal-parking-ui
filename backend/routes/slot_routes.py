@@ -47,12 +47,34 @@ def list_slot_details():
         # Dynamic capacities
         from models import WaivedUser, VisitorSubscription, SUBSCRIPTION_STATUS_ACTIVE, VisitorVehicle
         from datetime import datetime
-        from sqlalchemy import or_
+        from services.subscription_status_service import sync_expired_subscriptions
         today = datetime.utcnow().date()
-        
-        # Dynamic count
+        try:
+            sync_expired_subscriptions(today)
+        except Exception:
+            pass
+
+        # Staff Pass Zone Dynamic Calculation
+        all_staff = WaivedUser.query.all()
+        active_staff_count = 0
+        for staff in all_staff:
+            if staff.valid_from and today < staff.valid_from:
+                continue
+            if staff.valid_until and today > staff.valid_until:
+                continue
+            active_staff_count += 1
+
         occupied_staff = base_vehicle_query.filter_by(status='in', vehicle_category='Staff').count()
-        
+        reserved_staff = max(0, active_staff_count - occupied_staff)
+
+        # Monthly Pass Zone (Visitor Subscription) Dynamic Calculation
+        active_vis_subs = VisitorSubscription.query.filter(
+            VisitorSubscription.status == SUBSCRIPTION_STATUS_ACTIVE,
+            VisitorSubscription.start_date <= today,
+            VisitorSubscription.end_date >= today
+        ).all()
+        total_vis_sub_allocated = sum((sub.allocated_slots or 1) for sub in active_vis_subs)
+
         visitor_vehicles_in = base_vehicle_query.filter(Vehicle.status == 'in', Vehicle.vehicle_category == 'Visitor').all()
         
         occupied_visitor = 0
@@ -74,10 +96,14 @@ def list_slot_details():
                 occupied_visitor_sub += 1
             else:
                 occupied_visitor += 1
-                
+
+        reserved_visitor_sub = max(0, total_vis_sub_allocated - occupied_visitor_sub)
+        reserved_visitor = 0
+
         total_global = master_visitor_total
         occupied_global = occupied_visitor + occupied_staff + occupied_visitor_sub
-        available_global = max(0, total_global - occupied_global - visitor_reserved)
+        reserved_global = reserved_staff + reserved_visitor_sub
+        available_global = max(0, total_global - occupied_global - reserved_global)
         
         occupied_tenant = base_vehicle_query.filter_by(status='in', vehicle_category='Tenant').count()
         available_tenant = max(0, total_tenant - occupied_tenant - tenant_reserved)
@@ -86,21 +112,21 @@ def list_slot_details():
             'visitor': {
                 'total': total_global,
                 'occupied': occupied_visitor,
-                'reserved': visitor_reserved,
+                'reserved': reserved_visitor,
                 'available': available_global,
                 'occupancy_rate': round((occupied_visitor / total_global * 100), 1) if total_global > 0 else 0
             },
             'staff': {
                 'total': total_global,
                 'occupied': occupied_staff,
-                'reserved': visitor_reserved,
+                'reserved': reserved_staff,
                 'available': available_global,
                 'occupancy_rate': round((occupied_staff / total_global * 100), 1) if total_global > 0 else 0
             },
             'visitor_sub': {
                 'total': total_global,
                 'occupied': occupied_visitor_sub,
-                'reserved': visitor_reserved,
+                'reserved': reserved_visitor_sub,
                 'available': available_global,
                 'occupancy_rate': round((occupied_visitor_sub / total_global * 100), 1) if total_global > 0 else 0
             },
@@ -114,7 +140,7 @@ def list_slot_details():
             'overall': {
                 'total': total_global + total_tenant,
                 'occupied': occupied_global + occupied_tenant,
-                'reserved': visitor_reserved + tenant_reserved,
+                'reserved': reserved_global + tenant_reserved,
                 'available': available_global + available_tenant
             }
         }), 200

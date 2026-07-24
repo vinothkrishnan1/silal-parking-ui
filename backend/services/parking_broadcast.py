@@ -5,41 +5,76 @@ import traceback
 def get_current_slot_status():
     """Helper to fetch status using the same logic as the API"""
     try:
+        from models import WaivedUser, VisitorSubscription, VisitorVehicle, SUBSCRIPTION_STATUS_ACTIVE
+        from datetime import datetime
+        today = datetime.utcnow().date()
+
         settings = ParkingSettings.query.first()
         if not settings:
             return None
             
-        # Visitor & Staff counts
-        visitor_total = settings.total_visitor_slots
-        visitor_occupied = Vehicle.query.filter(
-            Vehicle.status == 'in',
-            Vehicle.vehicle_category.in_(['Visitor', 'Staff'])
-        ).count()
+        visitor_total = settings.total_visitor_slots or 0
         
-        if settings.visitor_occupied_override is not None:
-            visitor_occupied = settings.visitor_occupied_override
-            
-        visitor_reserved = settings.visitor_reserved
-        visitor_available = max(0, visitor_total - visitor_occupied - visitor_reserved)
+        all_staff = WaivedUser.query.all()
+        active_staff_count = 0
+        for staff in all_staff:
+            if staff.valid_from and today < staff.valid_from:
+                continue
+            if staff.valid_until and today > staff.valid_until:
+                continue
+            active_staff_count += 1
+
+        occupied_staff = Vehicle.query.filter_by(status='in', vehicle_category='Staff').count()
+        reserved_staff = max(0, active_staff_count - occupied_staff)
+
+        active_vis_subs = VisitorSubscription.query.filter(
+            VisitorSubscription.status == SUBSCRIPTION_STATUS_ACTIVE,
+            VisitorSubscription.start_date <= today,
+            VisitorSubscription.end_date >= today
+        ).all()
+        total_vis_sub_allocated = sum((sub.allocated_slots or 1) for sub in active_vis_subs)
+
+        visitor_vehicles_in = Vehicle.query.filter(Vehicle.status == 'in', Vehicle.vehicle_category == 'Visitor').all()
+        
+        occupied_visitor = 0
+        occupied_visitor_sub = 0
+        for v in visitor_vehicles_in:
+            vv = VisitorVehicle.query.filter_by(license_plate=v.license_plate).first()
+            has_sub = False
+            if vv:
+                active_sub = VisitorSubscription.query.filter(
+                    VisitorSubscription.visitor_id == vv.visitor_id,
+                    VisitorSubscription.status == SUBSCRIPTION_STATUS_ACTIVE,
+                    VisitorSubscription.start_date <= today,
+                    VisitorSubscription.end_date >= today
+                ).first()
+                if active_sub:
+                    has_sub = True
+                    
+            if has_sub:
+                occupied_visitor_sub += 1
+            else:
+                occupied_visitor += 1
+
+        reserved_visitor_sub = max(0, total_vis_sub_allocated - occupied_visitor_sub)
+
+        occupied_global = occupied_visitor + occupied_staff + occupied_visitor_sub
+        reserved_global = reserved_staff + reserved_visitor_sub
+        available_global = max(0, visitor_total - occupied_global - reserved_global)
         
         # Tenant counts
-        tenant_total = settings.total_tenant_slots
-        tenant_occupied = Vehicle.query.filter(
-            Vehicle.status == 'in',
-            Vehicle.vehicle_category == 'Tenant'
-        ).count()
-        
+        tenant_total = settings.total_tenant_slots or 0
+        tenant_occupied = Vehicle.query.filter_by(status='in', vehicle_category='Tenant').count()
         if settings.tenant_occupied_override is not None:
             tenant_occupied = settings.tenant_occupied_override
             
-        tenant_reserved = settings.tenant_reserved
+        tenant_reserved = settings.tenant_reserved or 0
         tenant_available = max(0, tenant_total - tenant_occupied - tenant_reserved)
         
-        # Grand total
         total = visitor_total + tenant_total
-        occupied = visitor_occupied + tenant_occupied
-        reserved = visitor_reserved + tenant_reserved
-        available = visitor_available + tenant_available
+        occupied = occupied_global + tenant_occupied
+        reserved = reserved_global + tenant_reserved
+        available = available_global + tenant_available
         
         return {
             'total': total,
@@ -48,9 +83,21 @@ def get_current_slot_status():
             'available': available,
             'visitor': {
                 'total': visitor_total,
-                'occupied': visitor_occupied,
-                'reserved': visitor_reserved,
-                'available': visitor_available
+                'occupied': occupied_visitor,
+                'reserved': 0,
+                'available': available_global
+            },
+            'staff': {
+                'total': visitor_total,
+                'occupied': occupied_staff,
+                'reserved': reserved_staff,
+                'available': available_global
+            },
+            'visitor_sub': {
+                'total': visitor_total,
+                'occupied': occupied_visitor_sub,
+                'reserved': reserved_visitor_sub,
+                'available': available_global
             },
             'tenant': {
                 'total': tenant_total,
