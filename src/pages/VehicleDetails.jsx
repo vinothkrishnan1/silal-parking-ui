@@ -50,6 +50,8 @@ const VehicleDetails = () => {
   const [qrPaymentType, setQrPaymentType] = useState('onDemand'); // 'onDemand' | 'monthlyPass'
   const [purchaseCustomerName, setPurchaseCustomerName] = useState('');
   const [purchaseCustomerPhone, setPurchaseCustomerPhone] = useState('');
+  const [purchaseCompanyName, setPurchaseCompanyName] = useState('');
+  const [purchaseBuildingNumber, setPurchaseBuildingNumber] = useState('');
   const [pricingPlans, setPricingPlans] = useState([]);
   const [pricingLoading, setPricingLoading] = useState(false);
 
@@ -159,6 +161,8 @@ const VehicleDetails = () => {
           const payload = {
             visitor_name: customerName,
             phone_number: customerPhone,
+            company_name: purchaseCompanyName.trim() || undefined,
+            building_number: purchaseBuildingNumber.trim() || undefined,
             location_id: locId,
             vehicles: [vehiclePlate],
             start_date: todayStr,
@@ -305,6 +309,8 @@ const VehicleDetails = () => {
     setPaymentGatewayError('');
     setPurchaseCustomerName('');
     setPurchaseCustomerPhone('');
+    setPurchaseCompanyName('');
+    setPurchaseBuildingNumber('');
   };
 
   const handleQrScanSimulate = () => {
@@ -1666,6 +1672,26 @@ const VehicleDetails = () => {
                         placeholder="Enter your name"
                         value={purchaseCustomerName}
                         onChange={(e) => { setPurchaseCustomerName(e.target.value); setScanVehicleError(''); }}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Company Name</label>
+                      <input
+                        type="text"
+                        className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-purple-400 bg-white text-sm font-bold transition-all"
+                        placeholder="Enter company name"
+                        value={purchaseCompanyName}
+                        onChange={(e) => { setPurchaseCompanyName(e.target.value); setScanVehicleError(''); }}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Building Number</label>
+                      <input
+                        type="text"
+                        className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-purple-400 bg-white text-sm font-bold transition-all"
+                        placeholder="Enter building number"
+                        value={purchaseBuildingNumber}
+                        onChange={(e) => { setPurchaseBuildingNumber(e.target.value); setScanVehicleError(''); }}
                       />
                     </div>
                     {scanVehicleError && (
