@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Search, Filter, Calendar, Clock, Car, X, Eye, Plus, QrCode, Check, Printer, CreditCard, DollarSign, FileText, Ticket, Users, ChevronLeft, ChevronRight, MapPin, Smartphone, Globe, ShoppingBag, Star, Wifi, Shield, Download, Mail, MessageSquare } from 'lucide-react';
+import { Search, Filter, Calendar, Clock, Car, X, Eye, Plus, QrCode, Check, Printer, CreditCard, DollarSign, FileText, Ticket, Users, ChevronLeft, ChevronRight, MapPin, Smartphone, Globe, ShoppingBag, Star, Wifi, Shield, ShieldCheck, Download, Mail, MessageSquare } from 'lucide-react';
 import { mockTieredPricingData } from '../data/mockData';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatAppDateTime, parseBackendDate } from '../utils/dateTime';
@@ -95,11 +95,13 @@ const VehicleDetails = () => {
   const fetchSlotData = async () => {
     try {
       const url = selectedLocation === 'all' 
-        ? apiUrl('/api/vehicles/dashboard') 
-        : apiUrl(`/api/vehicles/dashboard?location_id=${selectedLocation}`);
+        ? apiUrl('/api/slot/list-slot-details?location_id=all') 
+        : apiUrl(`/api/slot/list-slot-details?location_id=${selectedLocation}`);
       const response = await fetch(url);
-      const data = await response.json();
-      setSlotData(data);
+      if (response.ok) {
+        const data = await response.json();
+        setSlotData(data);
+      }
     } catch (error) {
       console.error('Error fetching slot data:', error);
     }
@@ -698,88 +700,257 @@ const VehicleDetails = () => {
         ))}
       </div>
 
-      <div className="premium-card p-6 mb-8 no-print relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-premium-gold/5 rounded-full blur-3xl pointer-events-none"></div>
-        <div className={`flex justify-between items-center mb-6 pb-2 relative z-10 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
-          <div className="flex items-center gap-3">
-             <h3 className="text-lg font-black text-gray-900 tracking-tight">{t('vehicles.parkingSlotStatus')}</h3>
-             <div className="h-1.5 w-12 bg-gradient-gold rounded-full hidden sm:block"></div>
-          </div>
-          <span className="text-xs font-bold text-gray-500 flex items-center gap-2 px-3 py-1.5 bg-gray-50/80 rounded-lg border border-gray-100 shadow-sm">
-             <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div> {t('slots.realTimeMonitoring')}
-          </span>
-        </div>
-        {slotData ? (
-          <div className={`grid grid-cols-1 md:grid-cols-${enableTenantSubscription ? '2' : '1'} gap-6 relative z-10 ${language === 'ar' ? 'rtl' : 'ltr'}`}>
-            <div className="bg-gray-50/50 p-6 rounded-2xl border border-gray-100 hover:shadow-md hover:bg-white hover:border-premium-gold/20 transition-all duration-300">
-              <div className={`flex justify-between items-center mb-5 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
-                <span className={`text-sm font-black text-gray-700 flex items-center gap-2 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
-                  <div className="bg-premium-black/5 p-1.5 rounded-lg text-premium-black">
-                     <Users size={16} />
-                  </div>
-                  {t('dashboard.visitorStaff')}
-                </span>
-                <span className={`flex items-center gap-1.5 px-3 py-1 text-[10px] font-bold uppercase rounded-lg border ${slotData.visitor?.available > 0 ? 'bg-green-50 text-green-700 border-green-200/60' : 'bg-red-50 text-red-700 border-red-200/60'}`}>
-                  {slotData.visitor?.available > 0 && <span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span></span>}
-                  {slotData.visitor?.available > 0 ? t('vehicles.available') : t('vehicles.full')}
-                </span>
-              </div>
-              <div className={`flex justify-between items-end ${language === 'ar' ? 'flex-row-reverse text-right' : 'text-left'}`}>
+      {/* Master Parking Pool & Zone Cards matching Slot Management & Dashboard */}
+      {slotData ? (
+        <>
+          {/* Master Parking Pool Card */}
+          <div className={`premium-card p-6 md:p-8 mb-8 relative overflow-hidden group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 ${language === 'ar' ? 'rtl' : 'ltr'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+            <div className="absolute top-0 right-0 w-80 h-80 bg-premium-gold/5 rounded-full blur-3xl pointer-events-none"></div>
+            
+            <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 pb-6 border-b border-gray-100 ${language === 'ar' ? 'sm:flex-row-reverse text-right' : 'text-left'}`}>
+              <div className={`flex items-center gap-4 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
+                <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-premium-black to-[#1a1a1a] text-premium-gold flex items-center justify-center shadow-md shadow-black/20 group-hover:scale-105 transition-transform flex-shrink-0">
+                  <Car size={24} />
+                </div>
                 <div>
-                  <p className="text-4xl font-black text-gray-900 tracking-tight">{slotData.visitor?.available}</p>
-                  <p className="text-[11px] font-semibold text-gray-500 mt-1 uppercase tracking-wider">{t('vehicles.available')} / {slotData.visitor?.total} {t('vehicles.total')}</p>
-                </div>
-                <div className={language === 'ar' ? 'text-left' : 'text-right'}>
-                  <p className="text-2xl font-bold text-gray-700">{slotData.visitor?.occupied}</p>
-                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{t('vehicles.occupied')}</p>
+                  <h2 className="text-xl font-black text-gray-900 tracking-tight">
+                    {language === 'ar' ? 'مجمع المواقف الرئيسي' : 'Master Parking Pool'}
+                  </h2>
+                  <p className="text-xs font-medium text-gray-500 mt-0.5">
+                    {language === 'ar' ? 'السعة الإجمالية للزوار والموظفين والاشتراكات الشهرية' : 'Global capacity for Visitors, Staff, and Monthly Passes'}
+                  </p>
                 </div>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-3 mt-6 overflow-hidden shadow-inner">
-                <div className="bg-premium-black h-full rounded-full transition-all duration-1000 relative" style={{ width: `${(slotData.visitor?.occupied / slotData.visitor?.total) * 100}%` }}>
-                  <div className="absolute inset-0 bg-white/20 w-full h-full animate-shimmer"></div>
+              
+              <div className="px-4 py-2 rounded-xl bg-gray-50 border border-gray-100 text-gray-800 text-sm font-bold shadow-sm flex items-center gap-1.5">
+                <span className="text-gray-900 font-black">{slotData.visitor?.total || 0}</span>
+                <span className="text-gray-400 font-semibold text-xs uppercase tracking-wider">{t('slotManagement.totalSlots') || 'Total Slots'}</span>
+              </div>
+            </div>
+
+            {(() => {
+              const total = slotData.visitor?.total || 0;
+              const available = slotData.visitor?.available || 0;
+              const occupied = (slotData.visitor?.occupied || 0) + (slotData.staff?.occupied || 0) + (slotData.visitor_sub?.occupied || 0);
+              const reserved = (slotData.visitor?.reserved || 0) + (slotData.staff?.reserved || 0) + (slotData.visitor_sub?.reserved || 0);
+              const occupancyRate = total > 0 ? (occupied / total) * 100 : 0;
+
+              return (
+                <>
+                  <div className="grid grid-cols-3 gap-4 md:gap-8 mb-6">
+                    <div className="bg-gray-50/60 border border-gray-100/80 p-4 md:p-5 rounded-2xl text-center group-hover:bg-white group-hover:border-premium-gold/20 transition-all duration-300">
+                      <p className="text-[11px] text-gray-400 uppercase tracking-widest font-black mb-1">{t('slotManagement.available') || 'AVAILABLE'}</p>
+                      <p className="text-2xl md:text-4xl font-black text-gray-900 tracking-tight">{available}</p>
+                    </div>
+                    <div className="bg-gray-50/60 border border-gray-100/80 p-4 md:p-5 rounded-2xl text-center group-hover:bg-white group-hover:border-premium-gold/20 transition-all duration-300">
+                      <p className="text-[11px] text-gray-400 uppercase tracking-widest font-black mb-1">{t('slotManagement.occupied') || 'OCCUPIED'}</p>
+                      <p className="text-2xl md:text-4xl font-black text-gray-900 tracking-tight">{occupied}</p>
+                    </div>
+                    <div className="bg-gray-50/60 border border-gray-100/80 p-4 md:p-5 rounded-2xl text-center group-hover:bg-white group-hover:border-premium-gold/20 transition-all duration-300">
+                      <p className="text-[11px] text-gray-400 uppercase tracking-widest font-black mb-1">{t('slotManagement.reserved') || 'RESERVED'}</p>
+                      <p className="text-2xl md:text-4xl font-black text-gray-900 tracking-tight">{reserved}</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center px-1">
+                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{t('slotManagement.occupancy') || 'OCCUPANCY'}</span>
+                      <span className={`text-xs font-black ${occupancyRate > 90 ? 'text-red-500' : 'text-gradient-gold'}`}>{occupancyRate.toFixed(1)}%</span>
+                    </div>
+                    <div className="w-full bg-gray-100 rounded-full h-3 relative overflow-hidden shadow-inner">
+                      <div
+                        className="bg-gradient-gold h-full rounded-full transition-all duration-1000 relative"
+                        style={{ width: `${Math.min(100, occupancyRate)}%` }}
+                      >
+                        <div className="absolute inset-0 bg-white/20 w-full h-full animate-shimmer"></div>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-center pt-2 gap-2">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                      </span>
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                        * {language === 'ar' ? 'المراقبة المباشرة نشطة' : 'REAL-TIME MONITORING ACTIVE'}
+                      </p>
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+
+          {/* Zones Grid */}
+          <div className={`grid grid-cols-1 md:grid-cols-2 ${enableTenantSubscription ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-6 mb-8`}>
+            {/* Visitor Zone */}
+            <div className={`premium-card p-6 flex flex-col justify-between group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 relative overflow-hidden ${language === 'ar' ? 'rtl' : 'ltr'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+              <div>
+                <div className={`flex items-center gap-3 mb-4 ${language === 'ar' ? 'flex-row-reverse text-right' : 'text-left'}`}>
+                  <div className="h-10 w-10 rounded-xl bg-premium-gold/10 flex items-center justify-center text-premium-gold shadow-sm group-hover:bg-premium-gold group-hover:text-white transition-colors flex-shrink-0">
+                    <Users size={20} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-base text-gray-900 tracking-tight leading-tight">{language === 'ar' ? 'منطقة الزوار' : 'Visitor Zone'}</h3>
+                    <p className="text-[11px] text-gray-500 font-medium mt-0.5">{language === 'ar' ? 'مواقف مأجورة عند الاستخدام' : 'Pay on use parking'}</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 my-4">
+                  <div className="text-center p-3 bg-gray-50/70 rounded-xl group-hover:bg-white transition-colors">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1">{t('slotManagement.occupied') || 'OCCUPIED'}</p>
+                    <p className="text-xl font-black text-gray-800">{slotData.visitor?.occupied || 0}</p>
+                  </div>
+                  <div className="text-center p-3 bg-gray-50/70 rounded-xl group-hover:bg-white transition-colors">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1">{t('slotManagement.reserved') || 'RESERVED'}</p>
+                    <p className="text-xl font-black text-gray-800">{slotData.visitor?.reserved || 0}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2 mt-2">
+                <div className="flex justify-between items-center px-1">
+                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{t('slotManagement.occupancy') || 'OCCUPANCY'}</span>
+                  <span className="text-[11px] font-black text-gray-700">{(slotData.visitor?.occupancy_rate || 0).toFixed(1)}%</span>
+                </div>
+                <div className="w-full bg-gray-100 rounded-full h-2 relative overflow-hidden shadow-inner">
+                  <div
+                    className="h-full rounded-full bg-gradient-gold transition-all duration-1000"
+                    style={{ width: `${Math.min(100, slotData.visitor?.occupancy_rate || 0)}%` }}
+                  ></div>
                 </div>
               </div>
             </div>
 
-            {enableTenantSubscription && (
-              <div className="bg-gray-50/50 p-6 rounded-2xl border border-gray-100 hover:shadow-md hover:bg-white hover:border-premium-gold/20 transition-all duration-300">
-                <div className={`flex justify-between items-center mb-5 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
-                  <span className={`text-sm font-black text-gray-700 flex items-center gap-2 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
-                    <div className="bg-premium-gold/10 p-1.5 rounded-lg text-premium-gold">
-                       <Car size={16} />
-                    </div>
-                    {t('dashboard.tenantSlots')}
-                  </span>
-                  <span className={`flex items-center gap-1.5 px-3 py-1 text-[10px] font-bold uppercase rounded-lg border ${slotData.tenant?.available > 0 ? 'bg-green-50 text-green-700 border-green-200/60' : 'bg-red-50 text-red-700 border-red-200/60'}`}>
-                    {slotData.tenant?.available > 0 && <span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span></span>}
-                    {slotData.tenant?.available > 0 ? t('vehicles.available') : t('vehicles.full')}
-                  </span>
-                </div>
-                <div className={`flex justify-between items-end ${language === 'ar' ? 'flex-row-reverse text-right' : 'text-left'}`}>
+            {/* Staff Pass Zone */}
+            <div className={`premium-card p-6 flex flex-col justify-between group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 relative overflow-hidden ${language === 'ar' ? 'rtl' : 'ltr'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+              <div>
+                <div className={`flex items-center gap-3 mb-4 ${language === 'ar' ? 'flex-row-reverse text-right' : 'text-left'}`}>
+                  <div className="h-10 w-10 rounded-xl bg-premium-gold/10 flex items-center justify-center text-premium-gold shadow-sm group-hover:bg-premium-gold group-hover:text-white transition-colors flex-shrink-0">
+                    <ShieldCheck size={20} />
+                  </div>
                   <div>
-                    <p className="text-4xl font-black text-gray-900 tracking-tight">{slotData.tenant?.available}</p>
-                    <p className="text-[11px] font-semibold text-gray-500 mt-1 uppercase tracking-wider">{t('vehicles.available')} / {slotData.tenant?.total} {t('vehicles.total')}</p>
-                  </div>
-                  <div className={language === 'ar' ? 'text-left' : 'text-right'}>
-                    <p className="text-2xl font-bold text-gray-700">{slotData.tenant?.occupied}</p>
-                    <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{t('vehicles.occupied')}</p>
+                    <h3 className="font-bold text-base text-gray-900 tracking-tight leading-tight">{language === 'ar' ? 'منطقة تصاريح الموظفين' : 'Staff Pass Zone'}</h3>
+                    <p className="text-[11px] text-gray-500 font-medium mt-0.5">{language === 'ar' ? 'مواقف الموظفين' : 'Staff parking'}</p>
                   </div>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-3 mt-6 overflow-hidden shadow-inner">
-                  <div className="bg-gradient-gold h-full rounded-full transition-all duration-1000 relative" style={{ width: `${(slotData.tenant?.occupied / slotData.tenant?.total) * 100}%` }}>
-                    <div className="absolute inset-0 bg-white/20 w-full h-full animate-shimmer" style={{ animationDelay: '0.5s' }}></div>
+
+                <div className="grid grid-cols-2 gap-3 my-4">
+                  <div className="text-center p-3 bg-gray-50/70 rounded-xl group-hover:bg-white transition-colors">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1">{t('slotManagement.occupied') || 'OCCUPIED'}</p>
+                    <p className="text-xl font-black text-gray-800">{slotData.staff?.occupied || 0}</p>
+                  </div>
+                  <div className="text-center p-3 bg-gray-50/70 rounded-xl group-hover:bg-white transition-colors">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1">{t('slotManagement.reserved') || 'RESERVED'}</p>
+                    <p className="text-xl font-black text-gray-800">{slotData.staff?.reserved || 0}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2 mt-2">
+                <div className="flex justify-between items-center px-1">
+                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{t('slotManagement.occupancy') || 'OCCUPANCY'}</span>
+                  <span className="text-[11px] font-black text-gray-700">{(slotData.staff?.occupancy_rate || 0).toFixed(1)}%</span>
+                </div>
+                <div className="w-full bg-gray-100 rounded-full h-2 relative overflow-hidden shadow-inner">
+                  <div
+                    className="h-full rounded-full bg-gradient-gold transition-all duration-1000"
+                    style={{ width: `${Math.min(100, slotData.staff?.occupancy_rate || 0)}%` }}
+                  ></div>
+                </div>
+              </div>
+            </div>
+
+            {/* Monthly Pass Zone */}
+            <div className={`premium-card p-6 flex flex-col justify-between group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 relative overflow-hidden ${language === 'ar' ? 'rtl' : 'ltr'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+              <div>
+                <div className={`flex items-center gap-3 mb-4 ${language === 'ar' ? 'flex-row-reverse text-right' : 'text-left'}`}>
+                  <div className="h-10 w-10 rounded-xl bg-premium-gold/10 flex items-center justify-center text-premium-gold shadow-sm group-hover:bg-premium-gold group-hover:text-white transition-colors flex-shrink-0">
+                    <Calendar size={20} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-base text-gray-900 tracking-tight leading-tight">{language === 'ar' ? 'منطقة الاشتراك الشهري' : 'Monthly Pass Zone'}</h3>
+                    <p className="text-[11px] text-gray-500 font-medium mt-0.5">{language === 'ar' ? 'اشتراكات الزوار' : 'Visitor subscriptions'}</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 my-4">
+                  <div className="text-center p-3 bg-gray-50/70 rounded-xl group-hover:bg-white transition-colors">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1">{t('slotManagement.occupied') || 'OCCUPIED'}</p>
+                    <p className="text-xl font-black text-gray-800">{slotData.visitor_sub?.occupied || 0}</p>
+                  </div>
+                  <div className="text-center p-3 bg-gray-50/70 rounded-xl group-hover:bg-white transition-colors">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1">{t('slotManagement.reserved') || 'RESERVED'}</p>
+                    <p className="text-xl font-black text-gray-800">{slotData.visitor_sub?.reserved || 0}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2 mt-2">
+                <div className="flex justify-between items-center px-1">
+                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{t('slotManagement.occupancy') || 'OCCUPANCY'}</span>
+                  <span className="text-[11px] font-black text-gray-700">{(slotData.visitor_sub?.occupancy_rate || 0).toFixed(1)}%</span>
+                </div>
+                <div className="w-full bg-gray-100 rounded-full h-2 relative overflow-hidden shadow-inner">
+                  <div
+                    className="h-full rounded-full bg-gradient-gold transition-all duration-1000"
+                    style={{ width: `${Math.min(100, slotData.visitor_sub?.occupancy_rate || 0)}%` }}
+                  ></div>
+                </div>
+              </div>
+            </div>
+
+            {/* Tenant Zone (if enabled) */}
+            {enableTenantSubscription && (
+              <div className={`premium-card p-6 flex flex-col justify-between group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 relative overflow-hidden ${language === 'ar' ? 'rtl' : 'ltr'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+                <div>
+                  <div className={`flex items-center gap-3 mb-4 ${language === 'ar' ? 'flex-row-reverse text-right' : 'text-left'}`}>
+                    <div className="h-10 w-10 rounded-xl bg-premium-gold/10 flex items-center justify-center text-premium-gold shadow-sm group-hover:bg-premium-gold group-hover:text-white transition-colors flex-shrink-0">
+                      <Car size={20} />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-base text-gray-900 tracking-tight leading-tight">{language === 'ar' ? 'منطقة المستأجرين' : 'Tenant Zone'}</h3>
+                      <p className="text-[11px] text-gray-500 font-medium mt-0.5">{language === 'ar' ? 'مواقف المستأجرين' : 'Tenant parking'}</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-3 my-4">
+                    <div className="text-center p-3 bg-gray-50/70 rounded-xl group-hover:bg-white transition-colors">
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1">{t('slotManagement.available') || 'AVAILABLE'}</p>
+                      <p className="text-xl font-black text-gray-800">{slotData.tenant?.available || 0}</p>
+                    </div>
+                    <div className="text-center p-3 bg-gray-50/70 rounded-xl group-hover:bg-white transition-colors">
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1">{t('slotManagement.occupied') || 'OCCUPIED'}</p>
+                      <p className="text-xl font-black text-gray-800">{slotData.tenant?.occupied || 0}</p>
+                    </div>
+                    <div className="text-center p-3 bg-gray-50/70 rounded-xl group-hover:bg-white transition-colors">
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1">{t('slotManagement.reserved') || 'RESERVED'}</p>
+                      <p className="text-xl font-black text-gray-800">{slotData.tenant?.reserved || 0}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2 mt-2">
+                  <div className="flex justify-between items-center px-1">
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{t('slotManagement.occupancy') || 'OCCUPANCY'}</span>
+                    <span className="text-[11px] font-black text-gray-700">{(slotData.tenant?.occupancy_rate || 0).toFixed(1)}%</span>
+                  </div>
+                  <div className="w-full bg-gray-100 rounded-full h-2 relative overflow-hidden shadow-inner">
+                    <div
+                      className="h-full rounded-full bg-gradient-gold transition-all duration-1000"
+                      style={{ width: `${Math.min(100, slotData.tenant?.occupancy_rate || 0)}%` }}
+                    ></div>
                   </div>
                 </div>
               </div>
             )}
           </div>
-        ) : (
-          <div className="h-32 flex flex-col items-center justify-center gap-3">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-premium-gold"></div>
-            <p className="text-sm text-gray-400 animate-pulse font-medium">{t('vehicles.loadingStatus')}</p>
-          </div>
-        )}
-      </div>
+        </>
+      ) : (
+        <div className="h-32 flex flex-col items-center justify-center gap-3">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-premium-gold"></div>
+          <p className="text-sm text-gray-400 animate-pulse font-medium">{t('vehicles.loadingStatus')}</p>
+        </div>
+      )}
 
       <div className="premium-card p-6 mb-8 no-print overflow-hidden">
         <div className={`flex flex-col md:flex-row gap-4 mb-6 justify-between items-center ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
