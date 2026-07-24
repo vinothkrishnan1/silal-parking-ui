@@ -10,6 +10,7 @@ const initialVehicle = () => ({ number: '', type: 'Car' });
 const createEmptyFormData = () => ({
   staffName: '',
   department: '',
+  locationId: '',
   vehicles: [initialVehicle()],
   validFrom: '',
   validUntil: '',
@@ -65,18 +66,24 @@ const normalizeVehicles = (vehicles = []) => {
   return normalizedVehicles.length > 0 ? normalizedVehicles : [initialVehicle()];
 };
 
-const buildStaffPassRecord = (pass, formData, vehicles) => ({
-  ...pass,
-  staffName: formData.staffName,
-  department: formData.department,
-  mobileNumber: sanitizeDigits(formData.mobileNumber, 8),
-  validFrom: normalizeDateValue(formData.validFrom),
-  validUntil: normalizeDateValue(formData.validUntil),
-  vehicles: vehicles.map((vehicle) => ({
-    number: vehicle.number || vehicle.plateNumber || '',
-    type: vehicle.type || 'Car'
-  }))
-});
+const buildStaffPassRecord = (pass, formData, vehicles, locations = []) => {
+  const matchedLoc = locations.find(l => String(l.id) === String(formData.locationId));
+  return {
+    ...pass,
+    staffName: formData.staffName,
+    department: formData.department,
+    locationId: formData.locationId,
+    location_id: formData.locationId,
+    locationName: matchedLoc ? matchedLoc.location_name : (pass.locationName || pass.location_name),
+    mobileNumber: sanitizeDigits(formData.mobileNumber, 8),
+    validFrom: normalizeDateValue(formData.validFrom),
+    validUntil: normalizeDateValue(formData.validUntil),
+    vehicles: vehicles.map((vehicle) => ({
+      number: vehicle.number || vehicle.plateNumber || '',
+      type: vehicle.type || 'Car'
+    }))
+  };
+};
 
 const Passes = () => {
   const { t, language } = useLanguage();
@@ -86,6 +93,22 @@ const Passes = () => {
   const [selectedStaffPass, setSelectedStaffPass] = useState(null);
   const passDetailsRef = useRef(null);
   const [formData, setFormData] = useState(createEmptyFormData());
+  const [locations, setLocations] = useState([]);
+
+  React.useEffect(() => {
+    const fetchLocations = async () => {
+      try {
+        const response = await fetch(apiUrl('/api/locations/'));
+        if (response.ok) {
+          const data = await response.json();
+          setLocations(data.filter(loc => loc.is_active));
+        }
+      } catch (err) {
+        console.error('Error fetching locations:', err);
+      }
+    };
+    fetchLocations();
+  }, []);
 
   const filteredStaffPasses = staffPasses.filter(pass =>
     pass.staffName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -130,6 +153,7 @@ const Passes = () => {
     setFormData({
       staffName: pass.staffName,
       department: pass.department,
+      locationId: pass.locationId || pass.location_id || '',
       vehicles: normalizeVehicles(pass.vehicles),
       validFrom: normalizeDateValue(pass.validFrom),
       validUntil: normalizeDateValue(pass.validUntil),
@@ -159,6 +183,11 @@ const Passes = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!formData.locationId) {
+      alert(language === 'ar' ? 'يرجى اختيار الموقع' : 'Location is required.');
+      return;
+    }
+
     const filledVehicles = formData.vehicles.filter(v => v.number.trim() !== '');
     if (filledVehicles.length === 0) {
       alert(t('passes.noVehicles'));
@@ -174,6 +203,8 @@ const Passes = () => {
     const apiData = {
       staffName: formData.staffName,
       department: formData.department,
+      locationId: formData.locationId,
+      location_id: formData.locationId,
       mobileNumber,
       validFrom: normalizeDateValue(formData.validFrom),
       validUntil: normalizeDateValue(formData.validUntil),
@@ -190,7 +221,7 @@ const Passes = () => {
           body: JSON.stringify({ ...apiData, passId: selectedStaffPass.passId })
         });
         if (response.ok) {
-          const updatedPass = buildStaffPassRecord(selectedStaffPass, { ...formData, mobileNumber }, filledVehicles);
+          const updatedPass = buildStaffPassRecord(selectedStaffPass, { ...formData, mobileNumber }, filledVehicles, locations);
           updateStaffPasses(staffPasses.map(pass =>
             pass.id === selectedStaffPass.id ? updatedPass : pass
           ));
@@ -211,7 +242,7 @@ const Passes = () => {
             id: resData.id ? resData.id.toString() : Date.now().toString(),
             passId: apiData.passId,
             status: 'active'
-          }, { ...formData, mobileNumber }, filledVehicles);
+          }, { ...formData, mobileNumber }, filledVehicles, locations);
           updateStaffPasses([...staffPasses, newPass]);
           setShowForm(false);
           setSelectedStaffPass(newPass);
@@ -481,6 +512,24 @@ const Passes = () => {
                     onChange={(e) => setFormData({ ...formData, department: e.target.value })}
                     required
                   />
+                </div>
+                <div>
+                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">
+                    {language === 'ar' ? 'الموقع *' : 'Location *'}
+                  </label>
+                  <select
+                    className={`w-full py-3.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-premium-gold/30 focus:border-premium-gold transition-all text-sm font-bold text-gray-900 shadow-sm ${language === 'ar' ? 'text-right' : ''}`}
+                    value={formData.locationId}
+                    onChange={(e) => setFormData({ ...formData, locationId: e.target.value })}
+                    required
+                  >
+                    <option value="">{language === 'ar' ? '-- اختر الموقع --' : '-- Select Location --'}</option>
+                    {locations.map((loc) => (
+                      <option key={loc.id} value={loc.id}>
+                        {loc.location_name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">{t('passes.mobileNumber')}</label>

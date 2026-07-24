@@ -126,6 +126,8 @@ class WaivedUser(db.Model):
     mobile_number = db.Column(db.String(30), nullable=True)
     valid_from = db.Column(db.Date, nullable=True)
     valid_until = db.Column(db.Date, nullable=True)
+    location_id = db.Column(db.Integer, db.ForeignKey('locations.id', ondelete='SET NULL'), nullable=True)
+    location = db.relationship('Location', foreign_keys=[location_id], lazy=True)
     
     # Verification info
     verified_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
@@ -399,6 +401,8 @@ class VisitorSubscription(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     visitor_id = db.Column(db.Integer, db.ForeignKey('visitors.id'), nullable=False)
     subscription_plan_id = db.Column(db.Integer, db.ForeignKey('pricing.id'), nullable=True)
+    location_id = db.Column(db.Integer, db.ForeignKey('locations.id', ondelete='SET NULL'), nullable=True)
+    location = db.relationship('Location', foreign_keys=[location_id], lazy=True)
     
     start_date = db.Column(db.Date, nullable=False)
     end_date = db.Column(db.Date, nullable=False)
@@ -447,6 +451,8 @@ class VisitorSubscription(db.Model):
             'company_name': self.visitor.company_name if self.visitor else "",
             'building_number': self.visitor.building_number if self.visitor else "",
             'vehicles': [v.license_plate for v in self.visitor.vehicles] if self.visitor else [],
+            'location_id': self.location_id,
+            'location_name': self.location.location_name if self.location else None,
             'start_date': self.start_date.isoformat() if self.start_date else None,
             'end_date': self.end_date.isoformat() if self.end_date else None,
             'allocated_slots': self.allocated_slots,

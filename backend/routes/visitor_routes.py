@@ -40,6 +40,12 @@ def ensure_visitor_schema():
     if 'building_number' not in existing_columns:
         schema_updates.append("ALTER TABLE visitors ADD COLUMN building_number VARCHAR(100) NULL")
 
+    sub_table = VisitorSubscription.__tablename__
+    if inspector.has_table(sub_table):
+        sub_columns = {column['name'] for column in inspector.get_columns(sub_table)}
+        if 'location_id' not in sub_columns:
+            schema_updates.append("ALTER TABLE visitor_subscriptions ADD COLUMN location_id INT NULL")
+
     if not schema_updates:
         return
 
@@ -228,6 +234,10 @@ def add_subscription():
             if 'company_name' in data: visitor.company_name = _normalize_text(data.get('company_name')) or None
             if 'building_number' in data: visitor.building_number = _normalize_text(data.get('building_number')) or None
 
+        location_id = data.get('location_id') or data.get('locationId')
+        if not location_id:
+            return jsonify({"error": "Location is required."}), 400
+
         plan_id = _normalize_plan_id(data.get('subscription_plan_id'))
         allocated_slots = _parse_allocated_slots(data.get('allocated_slots', 1))
         start_date = _parse_subscription_date(data.get('start_date'), 'Start Date')
@@ -263,6 +273,7 @@ def add_subscription():
 
         new_sub = VisitorSubscription(
             visitor_id=visitor.id,
+            location_id=int(location_id),
             start_date=start_date,
             end_date=end_date,
             allocated_slots=allocated_slots,
@@ -333,6 +344,12 @@ def update_subscription(id):
                     visitor.company_name = _normalize_text(data.get('company_name')) or None
                 if 'building_number' in data:
                     visitor.building_number = _normalize_text(data.get('building_number')) or None
+
+        location_id = data.get('location_id') or data.get('locationId')
+        if location_id:
+            sub.location_id = int(location_id)
+        elif 'location_id' in data or 'locationId' in data:
+            return jsonify({"error": "Location is required."}), 400
 
         if 'start_date' in data:
             sub.start_date = _parse_subscription_date(data['start_date'], 'Start Date')

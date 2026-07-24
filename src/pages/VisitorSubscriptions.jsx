@@ -73,6 +73,7 @@ const createInitialFormData = () => {
   return {
     id: null,
     visitor_id: null,
+    location_id: '',
     visitor_name: '',
     phone_number: '',
     company_name: '',
@@ -146,6 +147,7 @@ const VisitorVehicles = () => {
   const [statusModal, setStatusModal] = useState({ isOpen: false, type: 'success', title: '', message: '' });
   const [formData, setFormData] = useState(createInitialFormData());
   const [currentTime, setCurrentTime] = useState(() => new Date());
+  const [locations, setLocations] = useState([]);
 
   const apiUrl = API_BASE_URL;
   const todayStr = getTodayInputValue();
@@ -158,10 +160,11 @@ const VisitorVehicles = () => {
     }
 
     try {
-      const [subscriptionsResponse, plansResponse, visitorsResponse] = await Promise.all([
+      const [subscriptionsResponse, plansResponse, visitorsResponse, locationsResponse] = await Promise.all([
         axios.get(`${apiUrl}/api/visitors/subscriptions/`),
         axios.get(`${apiUrl}/api/pricing/`),
-        axios.get(`${apiUrl}/api/visitors/`)
+        axios.get(`${apiUrl}/api/visitors/`),
+        axios.get(`${apiUrl}/api/locations/`)
       ]);
 
       setVisitors(Array.isArray(subscriptionsResponse.data) ? subscriptionsResponse.data : []);
@@ -171,6 +174,9 @@ const VisitorVehicles = () => {
         )
       );
       setMasterVisitors(Array.isArray(visitorsResponse.data) ? visitorsResponse.data : []);
+      if (Array.isArray(locationsResponse.data)) {
+        setLocations(locationsResponse.data.filter(loc => loc.is_active));
+      }
       setError('');
     } catch (err) {
       setError(t('visitorSubscriptions.validation.fetchError'));
@@ -326,6 +332,7 @@ const VisitorVehicles = () => {
       setFormData({
         ...createInitialFormData(),
         ...visitor,
+        location_id: visitor.location_id ? String(visitor.location_id) : '',
         vehicles: visitor.vehicles && visitor.vehicles.length > 0 ? visitor.vehicles : [''],
         phone_number: sanitizeDigits(visitor.phone_number || '', 8),
         company_name: visitor.company_name || '',
@@ -341,7 +348,10 @@ const VisitorVehicles = () => {
         subscription_plan_id: visitor.subscription_plan_id ? String(visitor.subscription_plan_id) : ''
       });
     } else {
-      setFormData(createInitialFormData());
+      setFormData({
+        ...createInitialFormData(),
+        location_id: locations.length === 1 ? String(locations[0].id) : ''
+      });
     }
 
     setIsModalOpen(true);
@@ -354,6 +364,11 @@ const VisitorVehicles = () => {
   const validateForm = () => {
     if (!formData.visitor_name?.trim() || !formData.phone_number?.trim()) {
       setFormError(language === 'ar' ? 'يرجى إدخال اسم الزائر ورقم الهاتف' : 'Please enter Visitor Name and Phone Number');
+      return false;
+    }
+
+    if (!formData.location_id) {
+      setFormError(language === 'ar' ? 'يرجى اختيار الموقع' : 'Location is required.');
       return false;
     }
 
@@ -765,6 +780,25 @@ const VisitorVehicles = () => {
                         }}
                         className={`block w-full py-3 bg-gray-50/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-[#121212] focus:border-[#121212] focus:bg-white transition-all text-sm font-medium text-gray-900 shadow-sm px-4 ${language === 'ar' ? 'text-right' : 'text-left'}`}
                       />
+                    </div>
+                    <div>
+                      <label className={`block text-sm font-semibold text-gray-700 mb-1.5 ${language === 'ar' ? 'text-right' : ''}`}>
+                        {language === 'ar' ? 'الموقع *' : 'Location *'}
+                      </label>
+                      <select
+                        required
+                        name="location_id"
+                        value={formData.location_id || ''}
+                        onChange={handleInputChange}
+                        className={`block w-full py-3 bg-gray-50/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-[#121212] focus:border-[#121212] focus:bg-white transition-all text-sm font-medium text-gray-900 shadow-sm px-4 ${language === 'ar' ? 'text-right' : 'text-left'}`}
+                      >
+                        <option value="">{language === 'ar' ? '-- اختر الموقع --' : '-- Select Location --'}</option>
+                        {locations.map((loc) => (
+                          <option key={loc.id} value={loc.id}>
+                            {loc.location_name}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                     <div>
                       <label className={`block text-sm font-semibold text-gray-700 mb-1.5 ${language === 'ar' ? 'text-right' : ''}`}>{t('visitorSubscriptions.buildingNumber') || (language === 'ar' ? 'رقم المبنى' : 'Building Number')}</label>

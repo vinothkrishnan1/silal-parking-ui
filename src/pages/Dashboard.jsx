@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Car, LogIn, LogOut, ParkingCircle, DollarSign, Clock, AlertTriangle, X, Users } from 'lucide-react';
+import { Car, LogIn, LogOut, ParkingCircle, DollarSign, Clock, AlertTriangle, X, Users, ShieldCheck, CalendarDays } from 'lucide-react';
 import StatCard from '../components/StatCard';
 import VehicleFlowChart from '../components/VehicleFlowChart';
 import { motion } from 'framer-motion';
@@ -8,10 +8,59 @@ import { apiUrl } from '../utils/api';
 import { parseBackendDate } from '../utils/dateTime';
 import { useLanguage } from '../context/LanguageContext';
 
+const DashboardZoneCard = ({ title, subtitle, icon, occupied, reserved, available, occupancyRate, showAvailable = false, language }) => {
+  return (
+    <div className={`premium-card p-6 flex flex-col justify-between group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 relative overflow-hidden ${language === 'ar' ? 'rtl' : 'ltr'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      <div>
+        <div className={`flex items-center gap-3 mb-4 ${language === 'ar' ? 'flex-row-reverse text-right' : 'text-left'}`}>
+          <div className="h-10 w-10 rounded-xl bg-premium-gold/10 flex items-center justify-center text-premium-gold shadow-sm group-hover:bg-premium-gold group-hover:text-white transition-colors flex-shrink-0">
+            {icon}
+          </div>
+          <div>
+            <h3 className="font-bold text-base text-gray-900 tracking-tight leading-tight">{title}</h3>
+            <p className="text-[11px] text-gray-500 font-medium mt-0.5">{subtitle}</p>
+          </div>
+        </div>
+
+        <div className={`grid ${showAvailable ? 'grid-cols-3' : 'grid-cols-2'} gap-3 my-4`}>
+          {showAvailable && (
+            <div className="text-center p-3 bg-gray-50/70 rounded-xl group-hover:bg-white transition-colors">
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1">AVAILABLE</p>
+              <p className="text-xl font-black text-gray-800">{available}</p>
+            </div>
+          )}
+          <div className="text-center p-3 bg-gray-50/70 rounded-xl group-hover:bg-white transition-colors">
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1">OCCUPIED</p>
+            <p className="text-xl font-black text-gray-800">{occupied}</p>
+          </div>
+          <div className="text-center p-3 bg-gray-50/70 rounded-xl group-hover:bg-white transition-colors">
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1">RESERVED</p>
+            <p className="text-xl font-black text-gray-800">{reserved}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-2 mt-2">
+        <div className="flex justify-between items-center px-1">
+          <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">OCCUPANCY</span>
+          <span className="text-[11px] font-black text-gray-700">{occupancyRate.toFixed(1)}%</span>
+        </div>
+        <div className="w-full bg-gray-100 rounded-full h-2 relative overflow-hidden shadow-inner">
+          <div
+            className="h-full rounded-full bg-gradient-gold transition-all duration-1000"
+            style={{ width: `${Math.min(100, occupancyRate)}%` }}
+          ></div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const Dashboard = () => {
   const { vehiclesData = [], features } = useOutletContext();
   const { language, content, t } = useLanguage();
   const [dashboardData, setDashboardData] = useState(null);
+  const [slotData, setSlotData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showOverdueAlertModal, setShowOverdueAlertModal] = useState(false);
   const [error, setError] = useState(null);
@@ -61,15 +110,24 @@ const Dashboard = () => {
 
   const fetchDashboardData = async () => {
     try {
-      const response = await fetch(apiUrl(`/api/vehicles/dashboard?location_id=${selectedLocation}`));
-      if (!response.ok) {
-        throw new Error(`Server error: ${response.status}`);
+      const [dashRes, slotRes] = await Promise.all([
+        fetch(apiUrl(`/api/vehicles/dashboard?location_id=${selectedLocation}`)),
+        fetch(apiUrl(`/api/slot/list-slot-details?location_id=${selectedLocation}`))
+      ]);
+
+      if (!dashRes.ok) {
+        throw new Error(`Server error: ${dashRes.status}`);
       }
-      const data = await response.json();
+      const data = await dashRes.json();
       if (data.error) {
         throw new Error(data.error);
       }
       setDashboardData(data);
+
+      if (slotRes.ok) {
+        const slotDetails = await slotRes.json();
+        setSlotData(slotDetails);
+      }
       setError(null);
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
@@ -154,16 +212,7 @@ const Dashboard = () => {
         ))}
       </div>
 
-      <div className={`grid grid-cols-1 md:grid-cols-2 ${enableTenantSubscription ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-6 mb-8`}>
-        <div className="transform transition-transform hover:-translate-y-1 duration-300">
-          <StatCard
-            title={t('dashboard.visitorStaff')}
-            value={visitorAvailable}
-            icon={<ParkingCircle size={32} className="text-premium-gold" />}
-            color="bg-gradient-to-br from-premium-black to-[#1a1a1a] border border-white/10 shadow-lg shadow-black/20"
-            isAlert={visitorAvailable < 5}
-          />
-        </div>
+      <div className={`grid grid-cols-1 sm:grid-cols-2 ${enableTenantSubscription ? 'lg:grid-cols-3' : 'lg:grid-cols-2'} gap-6 mb-8`}>
         {enableTenantSubscription && (
           <div className="transform transition-transform hover:-translate-y-1 duration-300">
             <StatCard
@@ -192,6 +241,135 @@ const Dashboard = () => {
           />
         </div>
       </div>
+
+      {/* Master Parking Pool & Zone Cards matching Dashboard UI Theme */}
+      {slotData && (
+        <>
+          {/* Master Parking Pool Card */}
+          <div className={`premium-card p-6 md:p-8 mb-8 relative overflow-hidden group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 ${language === 'ar' ? 'rtl' : 'ltr'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+            <div className="absolute top-0 right-0 w-80 h-80 bg-premium-gold/5 rounded-full blur-3xl pointer-events-none"></div>
+            
+            <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 pb-6 border-b border-gray-100 ${language === 'ar' ? 'sm:flex-row-reverse text-right' : 'text-left'}`}>
+              <div className={`flex items-center gap-4 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
+                <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-premium-black to-[#1a1a1a] text-premium-gold flex items-center justify-center shadow-md shadow-black/20 group-hover:scale-105 transition-transform flex-shrink-0">
+                  <Car size={24} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-black text-gray-900 tracking-tight">
+                    {language === 'ar' ? 'مجمع المواقف الرئيسي' : 'Master Parking Pool'}
+                  </h2>
+                  <p className="text-xs font-medium text-gray-500 mt-0.5">
+                    {language === 'ar' ? 'السعة الإجمالية للزوار والموظفين والاشتراكات الشهرية' : 'Global capacity for Visitors, Staff, and Monthly Passes'}
+                  </p>
+                </div>
+              </div>
+              
+              <div className="px-4 py-2 rounded-xl bg-gray-50 border border-gray-100 text-gray-800 text-sm font-bold shadow-sm flex items-center gap-1.5">
+                <span className="text-gray-900 font-black">{slotData.visitor?.total || 0}</span>
+                <span className="text-gray-400 font-semibold text-xs uppercase tracking-wider">{t('slotManagement.totalSlots') || 'Total Slots'}</span>
+              </div>
+            </div>
+
+            {(() => {
+              const total = slotData.visitor?.total || 0;
+              const available = slotData.visitor?.available || 0;
+              const occupied = (slotData.visitor?.occupied || 0) + (slotData.staff?.occupied || 0) + (slotData.visitor_sub?.occupied || 0);
+              const reserved = (slotData.visitor?.reserved || 0) + (slotData.staff?.reserved || 0) + (slotData.visitor_sub?.reserved || 0);
+              const occupancyRate = total > 0 ? (occupied / total) * 100 : 0;
+
+              return (
+                <>
+                  <div className="grid grid-cols-3 gap-4 md:gap-8 mb-6">
+                    <div className="bg-gray-50/60 border border-gray-100/80 p-4 md:p-5 rounded-2xl text-center group-hover:bg-white group-hover:border-premium-gold/20 transition-all duration-300">
+                      <p className="text-[11px] text-gray-400 uppercase tracking-widest font-black mb-1">{t('slotManagement.available') || 'AVAILABLE'}</p>
+                      <p className="text-2xl md:text-4xl font-black text-gray-900 tracking-tight">{available}</p>
+                    </div>
+                    <div className="bg-gray-50/60 border border-gray-100/80 p-4 md:p-5 rounded-2xl text-center group-hover:bg-white group-hover:border-premium-gold/20 transition-all duration-300">
+                      <p className="text-[11px] text-gray-400 uppercase tracking-widest font-black mb-1">{t('slotManagement.occupied') || 'OCCUPIED'}</p>
+                      <p className="text-2xl md:text-4xl font-black text-gray-900 tracking-tight">{occupied}</p>
+                    </div>
+                    <div className="bg-gray-50/60 border border-gray-100/80 p-4 md:p-5 rounded-2xl text-center group-hover:bg-white group-hover:border-premium-gold/20 transition-all duration-300">
+                      <p className="text-[11px] text-gray-400 uppercase tracking-widest font-black mb-1">{t('slotManagement.reserved') || 'RESERVED'}</p>
+                      <p className="text-2xl md:text-4xl font-black text-gray-900 tracking-tight">{reserved}</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center px-1">
+                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{t('slotManagement.occupancy') || 'OCCUPANCY'}</span>
+                      <span className={`text-xs font-black ${occupancyRate > 90 ? 'text-red-500' : 'text-gradient-gold'}`}>{occupancyRate.toFixed(1)}%</span>
+                    </div>
+                    <div className="w-full bg-gray-100 rounded-full h-3 relative overflow-hidden shadow-inner">
+                      <div
+                        className="bg-gradient-gold h-full rounded-full transition-all duration-1000 relative"
+                        style={{ width: `${Math.min(100, occupancyRate)}%` }}
+                      >
+                        <div className="absolute inset-0 bg-white/20 w-full h-full animate-shimmer"></div>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-center pt-2 gap-2">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                      </span>
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                        * {language === 'ar' ? 'المراقبة المباشرة نشطة' : 'REAL-TIME MONITORING ACTIVE'}
+                      </p>
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+
+          {/* Zones Grid */}
+          <div className={`grid grid-cols-1 md:grid-cols-2 ${enableTenantSubscription ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-6 mb-8`}>
+            <DashboardZoneCard
+              title={language === 'ar' ? 'منطقة الزوار' : 'Visitor Zone'}
+              subtitle={language === 'ar' ? 'مواقف مأجورة عند الاستخدام' : 'Pay on use parking'}
+              icon={<Users size={20} className="text-premium-gold" />}
+              occupied={slotData.visitor?.occupied || 0}
+              reserved={slotData.visitor?.reserved || 0}
+              occupancyRate={slotData.visitor?.occupancy_rate || 0}
+              language={language}
+            />
+
+            <DashboardZoneCard
+              title={language === 'ar' ? 'منطقة تصاريح الموظفين' : 'Staff Pass Zone'}
+              subtitle={language === 'ar' ? 'مواقف الموظفين' : 'Staff parking'}
+              icon={<ShieldCheck size={20} className="text-premium-gold" />}
+              occupied={slotData.staff?.occupied || 0}
+              reserved={slotData.staff?.reserved || 0}
+              occupancyRate={slotData.staff?.occupancy_rate || 0}
+              language={language}
+            />
+
+            <DashboardZoneCard
+              title={language === 'ar' ? 'منطقة الاشتراك الشهري' : 'Monthly Pass Zone'}
+              subtitle={language === 'ar' ? 'اشتراكات الزوار' : 'Visitor subscriptions'}
+              icon={<CalendarDays size={20} className="text-premium-gold" />}
+              occupied={slotData.visitor_sub?.occupied || 0}
+              reserved={slotData.visitor_sub?.reserved || 0}
+              occupancyRate={slotData.visitor_sub?.occupancy_rate || 0}
+              language={language}
+            />
+
+            {enableTenantSubscription && (
+              <DashboardZoneCard
+                title={language === 'ar' ? 'منطقة المستأجرين' : 'Tenant Zone'}
+                subtitle={language === 'ar' ? 'مواقف المستأجرين' : 'Tenant parking'}
+                icon={<Car size={20} className="text-premium-gold" />}
+                occupied={slotData.tenant?.occupied || 0}
+                reserved={slotData.tenant?.reserved || 0}
+                available={slotData.tenant?.available || 0}
+                occupancyRate={slotData.tenant?.occupancy_rate || 0}
+                showAvailable={true}
+                language={language}
+              />
+            )}
+          </div>
+        </>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
         <div className="premium-card p-6 flex flex-col relative overflow-hidden">

@@ -51,6 +51,9 @@ def serialize_staff_member(staff):
         'mobileNumber': staff.mobile_number,
         'validFrom': format_date_value(staff.valid_from),
         'validUntil': format_date_value(staff.valid_until),
+        'locationId': staff.location_id,
+        'location_id': staff.location_id,
+        'locationName': staff.location.location_name if (hasattr(staff, 'location') and staff.location) else None,
         'status': 'active',
         'vehicles': vehicles
     }
@@ -74,6 +77,8 @@ def ensure_staff_pass_schema():
         schema_updates.append("ALTER TABLE waived_users ADD COLUMN valid_from DATE NULL")
     if 'valid_until' not in existing_columns:
         schema_updates.append("ALTER TABLE waived_users ADD COLUMN valid_until DATE NULL")
+    if 'location_id' not in existing_columns:
+        schema_updates.append("ALTER TABLE waived_users ADD COLUMN location_id INT NULL")
 
     if not schema_updates:
         return
@@ -97,6 +102,10 @@ def get_staff():
 def create_staff():
     try:
         data = request.json or {}
+        location_id = data.get('locationId') or data.get('location_id')
+        if not location_id:
+            return jsonify({'error': 'Location is required.'}), 400
+
         vehicles = data.get('vehicles', [])
         plate_str = ','.join([v.get('plateNumber', '').strip() for v in vehicles if v.get('plateNumber', '').strip()])
 
@@ -108,7 +117,8 @@ def create_staff():
             license_plate=plate_str,
             mobile_number=data.get('mobileNumber'),
             valid_from=parse_date_value(data.get('validFrom')),
-            valid_until=parse_date_value(data.get('validUntil'))
+            valid_until=parse_date_value(data.get('validUntil')),
+            location_id=int(location_id)
         )
 
         db.session.add(new_staff)
@@ -140,6 +150,12 @@ def update_staff(staff_id):
         
         if not staff:
             return jsonify({'error': 'Staff pass not found'}), 404
+
+        location_id = data.get('locationId') or data.get('location_id')
+        if location_id:
+            staff.location_id = int(location_id)
+        elif 'locationId' in data or 'location_id' in data:
+            return jsonify({'error': 'Location is required.'}), 400
 
         vehicles = data.get('vehicles', [])
         plate_str = ','.join([v.get('plateNumber', '').strip() for v in vehicles if v.get('plateNumber', '').strip()])
