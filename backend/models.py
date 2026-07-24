@@ -142,6 +142,8 @@ class Pricing(db.Model):
     price = db.Column(db.Float, default=0.0) # For Tenant Subscription
     start_date = db.Column(db.Date) # For Tenant Subscription (validity period for the plan itself)
     end_date = db.Column(db.Date) # For Tenant Subscription
+    duration_value = db.Column(db.Integer, default=1)
+    duration_unit = db.Column(db.String(20), default='months')
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -158,6 +160,8 @@ class Pricing(db.Model):
             'name': self.name,
             'description': self.description,
             'price': self.price,
+            'duration_value': self.duration_value,
+            'duration_unit': self.duration_unit,
             'start_date': self.start_date.isoformat() if self.start_date else None,
             'end_date': self.end_date.isoformat() if self.end_date else None,
             'is_active': self.is_active,

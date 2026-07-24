@@ -2,8 +2,19 @@ from flask import Blueprint, request, jsonify
 from extensions import db
 from models import Pricing, PricingTier
 from datetime import datetime
+from sqlalchemy import text
 
 pricing_bp = Blueprint('pricing', __name__)
+
+def ensure_pricing_schema():
+    with db.engine.connect() as conn:
+        try:
+            conn.execute(text("SELECT duration_value FROM pricing LIMIT 1"))
+        except:
+            conn.execute(text("ALTER TABLE pricing ADD COLUMN duration_value INTEGER DEFAULT 1"))
+            conn.execute(text("ALTER TABLE pricing ADD COLUMN duration_unit VARCHAR(20) DEFAULT 'months'"))
+            conn.commit()
+            print("Added duration_value and duration_unit columns to pricing table.")
 
 @pricing_bp.route('/', methods=['GET'])
 def get_pricing():
@@ -19,12 +30,16 @@ def get_active_tenant_plans():
 def add_pricing():
     data = request.json
     try:
+        duration_val = data.get('duration_value')
+        
         new_pricing = Pricing(
             pricing_type=data.get('pricing_type', 'Visitor Parking'),
             vehicle_type=data.get('vehicle_type'),
             name=data.get('name'),
             description=data.get('description'),
             price=float(data.get('price', 0.0)),
+            duration_value=int(duration_val) if duration_val not in [None, ''] else 1,
+            duration_unit=data.get('duration_unit', 'months'),
             is_active=data.get('is_active', True)
         )
         
@@ -62,6 +77,14 @@ def update_pricing(id):
         pricing.name = data.get('name', pricing.name)
         pricing.description = data.get('description', pricing.description)
         pricing.price = float(data.get('price', pricing.price))
+        
+        duration_val = data.get('duration_value')
+        if duration_val not in [None, '']:
+            pricing.duration_value = int(duration_val)
+        else:
+            pricing.duration_value = 1
+            
+        pricing.duration_unit = data.get('duration_unit', pricing.duration_unit)
         pricing.is_active = data.get('is_active', pricing.is_active)
 
         if data.get('start_date'):
