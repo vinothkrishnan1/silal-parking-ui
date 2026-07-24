@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Search, Filter, Calendar, Clock, Car, X, Eye, Plus, QrCode, Check, Printer, CreditCard, DollarSign, FileText, Ticket, Users, ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
+import { Search, Filter, Calendar, Clock, Car, X, Eye, Plus, QrCode, Check, Printer, CreditCard, DollarSign, FileText, Ticket, Users, ChevronLeft, ChevronRight, MapPin, Smartphone, Globe, ShoppingBag, Star, Wifi, Shield, Download, Mail, MessageSquare } from 'lucide-react';
 import { mockTieredPricingData } from '../data/mockData';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatAppDateTime, parseBackendDate } from '../utils/dateTime';
@@ -41,6 +41,13 @@ const VehicleDetails = () => {
   const [showExitVehicleModal, setShowExitVehicleModal] = useState(false);
   const [exitVehicleNumber, setExitVehicleNumber] = useState('');
   const [exitVehicleError, setExitVehicleError] = useState('');
+  // QR Payment Simulation state
+  const [scanVehicleInput, setScanVehicleInput] = useState('');
+  const [scanVehicleError, setScanVehicleError] = useState('');
+  const [selectedSlot, setSelectedSlot] = useState(null);
+  const [paymentGatewayData, setPaymentGatewayData] = useState({ cardNumber: '', expiry: '', cvv: '', name: '' });
+  const [paymentGatewayError, setPaymentGatewayError] = useState('');
+  const [qrPaymentType, setQrPaymentType] = useState('onDemand'); // 'onDemand' | 'monthlyPass'
 
   useEffect(() => {
     const fetchLocations = async () => {
@@ -182,22 +189,82 @@ const VehicleDetails = () => {
     setPaymentStep('initial');
     setScannedVehicleData(null);
     setWaiverRemarks('');
-    setTimeout(() => {
-      const insideVehicles = vehiclesData.filter(v => !v.exitTime);
-      if (insideVehicles.length > 0) {
-        const randomVehicle = insideVehicles[Math.floor(Math.random() * insideVehicles.length)];
-        setScannedVehicleData({
-          ...randomVehicle,
-          calculatedFee: calculateParkingFee(randomVehicle),
-          paymentTime: new Date().toISOString()
-        });
-        setPaymentStep('methodOrWaiverSelection');
-      } else {
-        alert(t('vehicles.noVehiclesFound'));
-        setShowScanModal(false);
-      }
-    }, 1500);
+    setScanVehicleInput('');
+    setScanVehicleError('');
+    setSelectedSlot(null);
+    setPaymentGatewayData({ cardNumber: '', expiry: '', cvv: '', name: '' });
+    setPaymentGatewayError('');
   };
+
+  const handleQrScanSimulate = () => {
+    // Simulate QR scan auto-detecting a vehicle
+    const insideVehicles = vehiclesData.filter(v => !v.exitTime);
+    if (insideVehicles.length > 0) {
+      const randomVehicle = insideVehicles[Math.floor(Math.random() * insideVehicles.length)];
+      setScannedVehicleData({
+        ...randomVehicle,
+        calculatedFee: calculateParkingFee(randomVehicle),
+        paymentTime: new Date().toISOString()
+      });
+      setScanVehicleInput(randomVehicle.vehicleNumber);
+      setPaymentStep('qrLanding');
+    } else {
+      setScanVehicleError('No vehicles currently inside parking.');
+    }
+  };
+
+  const handleScanVehicleLookup = () => {
+    if (!scanVehicleInput.trim()) {
+      setScanVehicleError('Please enter a vehicle number.');
+      return;
+    }
+    const insideVehicles = vehiclesData.filter(v => !v.exitTime);
+    const matched = insideVehicles.find(v => v.vehicleNumber.toLowerCase() === scanVehicleInput.trim().toLowerCase());
+    if (matched) {
+      setScanVehicleError('');
+      setScannedVehicleData({
+        ...matched,
+        calculatedFee: calculateParkingFee(matched),
+        paymentTime: new Date().toISOString()
+      });
+      setPaymentStep('qrLanding');
+    } else {
+      setScanVehicleError('Vehicle not found inside parking. Check the number and try again.');
+    }
+  };
+
+  const handleOpenScanWithVehicle = (vehicle) => {
+    setShowPreviewModal(false);
+    setShowScanModal(true);
+    setScanVehicleInput(vehicle.vehicleNumber);
+    setScanVehicleError('');
+    setSelectedSlot(null);
+    setPaymentGatewayData({ cardNumber: '', expiry: '', cvv: '', name: '' });
+    setPaymentGatewayError('');
+    setWaiverRemarks('');
+    setScannedVehicleData({
+      ...vehicle,
+      calculatedFee: calculateParkingFee(vehicle),
+      paymentTime: new Date().toISOString()
+    });
+    setPaymentStep('qrLanding');
+  };
+
+  const handleGatewayPayment = (nextStep) => {
+    if (!paymentGatewayData.name.trim()) { setPaymentGatewayError('Please enter cardholder name.'); return; }
+    const rawCard = paymentGatewayData.cardNumber.replace(/\s/g, '');
+    if (rawCard.length < 12) { setPaymentGatewayError('Please enter a valid card number.'); return; }
+    if (!paymentGatewayData.expiry.trim()) { setPaymentGatewayError('Please enter card expiry.'); return; }
+    if (paymentGatewayData.cvv.length < 3) { setPaymentGatewayError('Please enter a valid CVV.'); return; }
+    setPaymentGatewayError('');
+    setPaymentStep(nextStep);
+  };
+
+  const MONTHLY_PASS_SLOTS = [
+    { id: 'daily', label: 'Daily Pass', duration: '1 Day', price: '1.500', features: ['24hr Access', 'Single Entry/Exit', 'Digital Receipt'], color: 'from-blue-500 to-blue-600' },
+    { id: 'weekly', label: 'Weekly Pass', duration: '7 Days', price: '8.000', features: ['7-Day Access', 'Unlimited Entries', 'Priority Slot', 'Digital Receipt'], color: 'from-purple-500 to-purple-600', popular: true },
+    { id: 'monthly', label: 'Monthly Pass', duration: '30 Days', price: '25.000', features: ['30-Day Access', 'Unlimited Entries', 'Reserved Slot', 'SMS Alerts', 'Digital Receipt'], color: 'from-amber-500 to-orange-500' },
+  ];
 
   const calculateParkingFee = (vehicle) => {
     if (!vehicle || !vehicle.entryTime || vehicle.type === 'Staff' || vehicle.paymentStatus === 'waived' || vehicle.hasActiveSubscription) return '0.000';
@@ -752,8 +819,14 @@ const VehicleDetails = () => {
                   </div>
                 </div>
               </div>
-              <div className="p-4 bg-gray-50/80 flex justify-center border-t border-gray-100">
-                <button className="ripple-button px-10 py-3 bg-white border border-gray-200 text-gray-800 font-black rounded-xl hover:bg-gray-50 hover:shadow-md transition-all active:scale-95 shadow-sm" onClick={() => setShowPreviewModal(false)}>{t('common.close')}</button>
+              <div className={`p-4 bg-gray-50/80 flex gap-3 border-t border-gray-100 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
+                <button className="ripple-button flex-1 px-6 py-3 bg-white border border-gray-200 text-gray-800 font-black rounded-xl hover:bg-gray-50 hover:shadow-md transition-all active:scale-95 shadow-sm" onClick={() => setShowPreviewModal(false)}>{t('common.close')}</button>
+                <button
+                  className="ripple-button flex-1 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-black rounded-xl hover:shadow-lg hover:shadow-green-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"
+                  onClick={() => handleOpenScanWithVehicle(selectedVehicleForPreview)}
+                >
+                  <CreditCard size={16} /> Process Payment
+                </button>
               </div>
             </motion.div>
           </div>
@@ -833,30 +906,571 @@ const VehicleDetails = () => {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             className="bg-white rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl"
+            style={{ maxHeight: '90vh', overflowY: 'auto' }}
           >
             <div className={`p-6 border-b flex justify-between items-center bg-gray-50 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
               <h3 className="text-xl font-black text-gray-800 uppercase tracking-tight">
                 {paymentStep === 'initial' && t('vehicles.scanTicket')}
+                {paymentStep === 'qrLanding' && 'Pro Parking Payment'}
+                {paymentStep === 'onDemandDetails' && 'Parking Session Details'}
+                {paymentStep === 'onDemandPaymentGateway' && 'Secure Payment'}
+                {paymentStep === 'onDemandPaymentProcessing' && 'Processing Payment'}
+                {paymentStep === 'purchaseParkingSlots' && 'Purchase Parking Pass'}
+                {paymentStep === 'purchaseSlotPaymentGateway' && 'Secure Payment'}
+                {paymentStep === 'purchaseProcessing' && 'Activating Pass'}
+                {paymentStep === 'slotPurchaseReceipt' && 'Pass Activated!'}
                 {paymentStep === 'methodOrWaiverSelection' && t('vehicles.processExit')}
                 {paymentStep === 'paymentMethodSelection' && t('vehicles.selectPaymentMethod')}
                 {paymentStep === 'waiverReasonInput' && t('vehicles.applyWaiver')}
                 {paymentStep === 'receipt' && (scannedVehicleData?.paymentMethod === 'Waiver' ? t('vehicles.waiverConfirmation') : t('vehicles.paymentReceipt'))}
               </h3>
-              <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-white rounded-full transition-colors shadow-sm" onClick={() => { setShowScanModal(false); setScannedVehicleData(null); setPaymentStep('initial'); setWaiverRemarks(''); }}> <X size={20} /> </button>
+              <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-white rounded-full transition-colors shadow-sm" onClick={() => { setShowScanModal(false); setScannedVehicleData(null); setPaymentStep('initial'); setWaiverRemarks(''); setScanVehicleInput(''); setScanVehicleError(''); setSelectedSlot(null); setPaymentGatewayData({ cardNumber: '', expiry: '', cvv: '', name: '' }); setPaymentGatewayError(''); }}> <X size={20} /> </button>
             </div>
 
             <div className="p-8">
               {paymentStep === 'initial' && (
-                <div className="flex flex-col items-center py-4 text-center"> 
-                  <div className="w-56 h-56 bg-premium-black rounded-2xl flex items-center justify-center mb-8 relative border-[6px] border-white shadow-xl shadow-premium-gold/20">
-                    <QrCode size={120} className="text-white opacity-20" />
+                <div className="flex flex-col items-center py-2 text-center">
+                  {/* QR Scanner Animation */}
+                  <div
+                    className="w-48 h-48 bg-premium-black rounded-2xl flex items-center justify-center mb-6 relative border-[6px] border-white shadow-xl shadow-premium-gold/20 cursor-pointer group hover:shadow-2xl hover:shadow-premium-gold/30 transition-all"
+                    onClick={handleQrScanSimulate}
+                    title="Click to simulate QR scan"
+                  >
+                    <QrCode size={100} className="text-white opacity-20 group-hover:opacity-30 transition-opacity" />
                     <div className="absolute inset-4 border-2 border-premium-gold rounded-lg"></div>
                     <div className="absolute top-4 left-4 right-4 h-1 bg-premium-gold/80 animate-scan-line shadow-glow"></div>
-                  </div> 
-                  <h4 className="text-xl font-bold text-gray-800 mb-2">{t('vehicles.scanning')}</h4>
-                  <p className="text-gray-400 text-sm">{t('vehicles.scanHint')}</p> 
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 rounded-xl">
+                      <span className="text-white text-xs font-bold uppercase tracking-wider">Tap to Scan</span>
+                    </div>
+                  </div>
+                  <h4 className="text-lg font-bold text-gray-800 mb-1">{t('vehicles.scanning')}</h4>
+                  <p className="text-gray-400 text-xs mb-6">Tap the QR code above to simulate a scan</p>
+
+                  {/* Divider */}
+                  <div className="w-full flex items-center gap-3 mb-5">
+                    <div className="flex-1 h-px bg-gray-200"></div>
+                    <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">or enter manually</span>
+                    <div className="flex-1 h-px bg-gray-200"></div>
+                  </div>
+
+                  {/* Vehicle Number Input */}
+                  <div className="w-full space-y-3">
+                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest text-left">Vehicle Number</label>
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                          <Car size={16} className="text-gray-400" />
+                        </div>
+                        <input
+                          type="text"
+                          className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-premium-gold/30 focus:border-premium-gold transition-all bg-gray-50 focus:bg-white text-sm font-bold uppercase placeholder:normal-case placeholder:font-normal"
+                          placeholder="e.g. ABC 1234"
+                          value={scanVehicleInput}
+                          onChange={(e) => { setScanVehicleInput(e.target.value.toUpperCase()); setScanVehicleError(''); }}
+                          onKeyDown={(e) => e.key === 'Enter' && handleScanVehicleLookup()}
+                        />
+                      </div>
+                      <button
+                        className="px-5 py-3 bg-gradient-to-r from-premium-black to-[#1a1a1a] text-white rounded-xl font-bold text-sm hover:shadow-lg hover:shadow-black/20 active:scale-95 transition-all whitespace-nowrap"
+                        onClick={handleScanVehicleLookup}
+                      >
+                        Find
+                      </button>
+                    </div>
+                    {scanVehicleError && (
+                      <p className="text-red-500 text-xs font-bold text-left flex items-center gap-1.5">
+                        <X size={12} /> {scanVehicleError}
+                      </p>
+                    )}
+                  </div>
                 </div>
               )}
+
+              {/* QR Landing Page */}
+              {paymentStep === 'qrLanding' && (
+                <div className="space-y-5">
+                  {/* Simulated phone/browser landing page */}
+                  <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-5 text-white relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-40 h-40 bg-premium-gold/10 rounded-full blur-3xl"></div>
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="bg-premium-gold/20 p-2 rounded-lg">
+                        <Globe size={18} className="text-premium-gold" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-gray-400 uppercase tracking-widest">Pro Parking · Silal Market</p>
+                        <p className="text-xs font-bold text-gray-200">proparking.silalmarket.com</p>
+                      </div>
+                      <div className="ml-auto flex items-center gap-1">
+                        <Wifi size={12} className="text-green-400" />
+                        <Shield size={12} className="text-green-400" />
+                      </div>
+                    </div>
+                    <div className="border-t border-white/10 pt-4">
+                      <p className="text-xs text-gray-400 mb-1">Vehicle Detected</p>
+                      <h4 className="text-2xl font-black tracking-widest text-white">
+                        {scannedVehicleData?.vehicleNumber || scanVehicleInput}
+                      </h4>
+                      <p className="text-xs text-premium-gold font-bold mt-1 uppercase tracking-wider">
+                        {scannedVehicleData?.type || 'Visitor'} · Session Active
+                      </p>
+                    </div>
+                  </div>
+
+                  <p className="text-center text-sm font-bold text-gray-600">What would you like to do?</p>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <button
+                      className="p-5 rounded-2xl border-2 border-gray-100 hover:border-premium-gold hover:bg-premium-gold/5 transition-all flex flex-col items-center gap-3 group active:scale-95"
+                      onClick={() => { setQrPaymentType('onDemand'); setPaymentStep('onDemandDetails'); }}
+                    >
+                      <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-green-500/30 group-hover:scale-110 transition-transform">
+                        <CreditCard size={22} />
+                      </div>
+                      <div className="text-center">
+                        <div className="font-black text-gray-800 text-sm">Pay Now</div>
+                        <div className="text-[10px] font-bold text-gray-400 mt-0.5">On-Demand Payment</div>
+                      </div>
+                    </button>
+                    <button
+                      className="p-5 rounded-2xl border-2 border-gray-100 hover:border-premium-gold hover:bg-premium-gold/5 transition-all flex flex-col items-center gap-3 group active:scale-95"
+                      onClick={() => { setQrPaymentType('monthlyPass'); setPaymentStep('purchaseParkingSlots'); }}
+                    >
+                      <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-purple-500/30 group-hover:scale-110 transition-transform">
+                        <ShoppingBag size={22} />
+                      </div>
+                      <div className="text-center">
+                        <div className="font-black text-gray-800 text-sm">Purchase Parking</div>
+                        <div className="text-[10px] font-bold text-gray-400 mt-0.5">Monthly Pass</div>
+                      </div>
+                    </button>
+                  </div>
+
+                  <p className="text-center text-[10px] text-gray-400">
+                    🔒 Secured by Pro Parking · SSL Encrypted
+                  </p>
+                </div>
+              )}
+
+              {/* On-Demand Details */}
+              {paymentStep === 'onDemandDetails' && scannedVehicleData && (
+                <div className="space-y-5">
+                  <div className={`bg-premium-gold/5 p-4 rounded-xl border border-premium-gold/20 flex items-center gap-4 shadow-sm ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
+                    <div className="bg-gradient-gold rounded-full p-3 text-white shadow-lg shadow-premium-gold/30">
+                      <Car size={22} />
+                    </div>
+                    <div>
+                      <h4 className="font-black text-gray-900 text-lg">{scannedVehicleData.vehicleNumber}</h4>
+                      <p className="text-xs font-bold text-premium-gold uppercase tracking-widest">{scannedVehicleData.type}</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-gray-50 p-3.5 rounded-xl border border-gray-100">
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Entry Time</p>
+                      <p className="text-xs font-bold text-gray-800">{formatDateTimeForDisplay(scannedVehicleData.entryTime)}</p>
+                    </div>
+                    <div className="bg-gray-50 p-3.5 rounded-xl border border-gray-100">
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Current Time</p>
+                      <p className="text-xs font-bold text-gray-800">{new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}</p>
+                    </div>
+                    <div className="bg-gray-50 p-3.5 rounded-xl border border-gray-100">
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Duration</p>
+                      <p className="text-xs font-bold text-gray-800">{computeDuration(scannedVehicleData.entryTime, null)}</p>
+                    </div>
+                    <div className="bg-gray-50 p-3.5 rounded-xl border border-gray-100">
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Status</p>
+                      <span className="text-xs font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-lg">Pending Payment</span>
+                    </div>
+                  </div>
+
+                  <div className="bg-white p-5 rounded-2xl border-2 border-premium-gold/30 text-center relative overflow-hidden shadow-[0_0_20px_rgba(212,175,55,0.1)]">
+                    <div className="absolute top-0 right-0 p-2 opacity-5"><DollarSign size={80} className="text-premium-gold" /></div>
+                    <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-1">Amount Due</span>
+                    <span className="text-4xl font-black text-gradient-gold drop-shadow-sm">{t('dashboard.omr')} {scannedVehicleData.calculatedFee}</span>
+                    <p className="text-[10px] text-gray-400 mt-2">Based on configured time slab pricing</p>
+                  </div>
+
+                  <button
+                    className="ripple-button w-full px-4 py-4 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-black text-base hover:shadow-lg hover:shadow-green-500/30 active:scale-95 transition-all flex items-center justify-center gap-2"
+                    onClick={() => setPaymentStep('onDemandPaymentGateway')}
+                  >
+                    <CreditCard size={18} /> Proceed to Payment
+                  </button>
+                  <button className="w-full py-2.5 text-sm text-gray-400 font-bold hover:text-gray-600 transition-colors" onClick={() => setPaymentStep('qrLanding')}>← Back</button>
+                </div>
+              )}
+
+              {/* Online Payment Gateway Simulation - On Demand */}
+              {paymentStep === 'onDemandPaymentGateway' && scannedVehicleData && (
+                <div className="space-y-5">
+                  {/* Gateway Header */}
+                  <div className="bg-gradient-to-r from-slate-800 to-slate-900 rounded-xl p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Shield size={16} className="text-green-400" />
+                      <span className="text-green-400 text-xs font-bold">Secure Payment</span>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-white font-black text-lg">{t('dashboard.omr')} {scannedVehicleData.calculatedFee}</p>
+                      <p className="text-gray-400 text-[10px]">Parking Fee · {scannedVehicleData.vehicleNumber}</p>
+                    </div>
+                  </div>
+
+                  {/* Card Visual */}
+                  <div className="relative h-36 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 rounded-2xl p-5 overflow-hidden shadow-xl">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-8 translate-x-8"></div>
+                    <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-8 -translate-x-8"></div>
+                    <div className="flex justify-between items-start mb-4">
+                      <Wifi size={24} className="text-white/70 rotate-90" />
+                      <div className="flex gap-1">
+                        <div className="w-8 h-8 bg-yellow-400 rounded-full opacity-90"></div>
+                        <div className="w-8 h-8 bg-red-500 rounded-full opacity-80 -ml-3"></div>
+                      </div>
+                    </div>
+                    <p className="text-white font-mono text-sm tracking-widest">
+                      {paymentGatewayData.cardNumber ? paymentGatewayData.cardNumber.replace(/(.{4})/g,'$1 ').trim() : '**** **** **** ****'}
+                    </p>
+                    <div className="flex justify-between items-end mt-2">
+                      <p className="text-white/70 text-xs font-bold">{paymentGatewayData.name || 'CARDHOLDER NAME'}</p>
+                      <p className="text-white/70 text-xs font-mono">{paymentGatewayData.expiry || 'MM/YY'}</p>
+                    </div>
+                  </div>
+
+                  {/* Form Fields */}
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Cardholder Name</label>
+                      <input
+                        type="text"
+                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 bg-gray-50 focus:bg-white text-sm font-bold transition-all"
+                        placeholder="As on card"
+                        value={paymentGatewayData.name}
+                        onChange={(e) => { setPaymentGatewayData(p => ({ ...p, name: e.target.value })); setPaymentGatewayError(''); }}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Card Number</label>
+                      <input
+                        type="text"
+                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 bg-gray-50 focus:bg-white text-sm font-bold font-mono tracking-wider transition-all"
+                        placeholder="1234 5678 9012 3456"
+                        maxLength={19}
+                        value={paymentGatewayData.cardNumber}
+                        onChange={(e) => {
+                          const v = e.target.value.replace(/\D/g, '').slice(0, 16);
+                          const formatted = v.replace(/(.{4})/g, '$1 ').trim();
+                          setPaymentGatewayData(p => ({ ...p, cardNumber: formatted }));
+                          setPaymentGatewayError('');
+                        }}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Expiry</label>
+                        <input
+                          type="text"
+                          className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 bg-gray-50 focus:bg-white text-sm font-bold font-mono transition-all"
+                          placeholder="MM/YY"
+                          maxLength={5}
+                          value={paymentGatewayData.expiry}
+                          onChange={(e) => {
+                            let v = e.target.value.replace(/\D/g, '').slice(0, 4);
+                            if (v.length >= 3) v = v.slice(0,2) + '/' + v.slice(2);
+                            setPaymentGatewayData(p => ({ ...p, expiry: v }));
+                            setPaymentGatewayError('');
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">CVV</label>
+                        <input
+                          type="password"
+                          className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 bg-gray-50 focus:bg-white text-sm font-bold font-mono transition-all"
+                          placeholder="•••"
+                          maxLength={4}
+                          value={paymentGatewayData.cvv}
+                          onChange={(e) => { setPaymentGatewayData(p => ({ ...p, cvv: e.target.value.replace(/\D/g,'').slice(0,4) })); setPaymentGatewayError(''); }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {paymentGatewayError && (
+                    <p className="text-red-500 text-xs font-bold flex items-center gap-1.5"><X size={12} />{paymentGatewayError}</p>
+                  )}
+
+                  <button
+                    className="ripple-button w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-black text-base hover:shadow-lg hover:shadow-indigo-500/30 active:scale-95 transition-all flex items-center justify-center gap-2"
+                    onClick={() => handleGatewayPayment('onDemandPaymentProcessing')}
+                  >
+                    <Shield size={18} /> Pay {t('dashboard.omr')} {scannedVehicleData.calculatedFee} Securely
+                  </button>
+                  <p className="text-center text-[10px] text-gray-400">🔒 256-bit SSL Encrypted · PCI DSS Compliant</p>
+                  <button className="w-full py-2 text-sm text-gray-400 font-bold hover:text-gray-600 transition-colors" onClick={() => setPaymentStep('onDemandDetails')}>← Back</button>
+                </div>
+              )}
+
+              {/* Payment Processing */}
+              {paymentStep === 'onDemandPaymentProcessing' && (() => {
+                setTimeout(() => {
+                  const exitTime = new Date().toISOString().slice(0, 16).replace('T', ' ');
+                  const paymentData = { exitTime, paymentMethod: 'Card', paymentAmount: scannedVehicleData?.calculatedFee, paymentTime: new Date().toISOString(), waiverReason: null };
+                  setScannedVehicleData(prev => ({ ...prev, ...paymentData }));
+                  processVehicleExitAndUpdateGlobal(scannedVehicleData?.id, paymentData);
+                  fetch(apiUrl('/payment_status'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ license_plate: scannedVehicleData?.vehicleNumber, payment_status: 'paid', payment_mode: 'card', payable_amount: scannedVehicleData?.calculatedFee }) }).catch(() => {});
+                }, 2500);
+                return (
+                  <div className="flex flex-col items-center py-10 gap-6">
+                    <div className="relative w-24 h-24">
+                      <div className="absolute inset-0 rounded-full border-4 border-gray-100"></div>
+                      <div className="absolute inset-0 rounded-full border-4 border-t-indigo-600 border-r-indigo-600 border-b-transparent border-l-transparent animate-spin"></div>
+                      <div className="absolute inset-3 rounded-full bg-indigo-50 flex items-center justify-center">
+                        <Shield size={24} className="text-indigo-600" />
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <h4 className="font-black text-gray-800 text-lg">Verifying Payment…</h4>
+                      <p className="text-gray-400 text-sm mt-1">Please wait. Do not close this window.</p>
+                    </div>
+                    <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+                      <div className="h-full bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full animate-pulse" style={{ width: '70%' }}></div>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-gray-400 font-bold">
+                      <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                      Communicating with bank…
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Purchase Parking Slots */}
+              {paymentStep === 'purchaseParkingSlots' && (
+                <div className="space-y-4">
+                  <div className="text-center">
+                    <h4 className="font-black text-gray-800 text-base">Choose Your Parking Pass</h4>
+                    <p className="text-gray-400 text-xs mt-1">Select a plan that suits your needs</p>
+                  </div>
+
+                  <div className="space-y-3">
+                    {MONTHLY_PASS_SLOTS.map(slot => (
+                      <button
+                        key={slot.id}
+                        className={`w-full p-4 rounded-2xl border-2 text-left transition-all relative overflow-hidden group ${
+                          selectedSlot?.id === slot.id
+                            ? 'border-premium-gold bg-premium-gold/5 shadow-md'
+                            : 'border-gray-100 hover:border-gray-300 bg-white'
+                        }`}
+                        onClick={() => setSelectedSlot(slot)}
+                      >
+                        {slot.popular && (
+                          <span className="absolute top-3 right-3 bg-gradient-to-r from-purple-500 to-indigo-600 text-white text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full">
+                            Most Popular
+                          </span>
+                        )}
+                        <div className="flex items-center gap-4">
+                          <div className={`w-12 h-12 bg-gradient-to-br ${slot.color} rounded-xl flex items-center justify-center text-white shadow-md group-hover:scale-105 transition-transform`}>
+                            <ShoppingBag size={20} />
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between">
+                              <h5 className="font-black text-gray-800">{slot.label}</h5>
+                              <span className="font-black text-gray-900">{t('dashboard.omr')} {slot.price}</span>
+                            </div>
+                            <p className="text-xs text-gray-400 font-bold mt-0.5">{slot.duration}</p>
+                            <div className="flex flex-wrap gap-1.5 mt-2">
+                              {slot.features.map(f => (
+                                <span key={f} className="text-[9px] font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">{f}</span>
+                              ))}
+                            </div>
+                          </div>
+                          {selectedSlot?.id === slot.id && (
+                            <div className="w-6 h-6 bg-premium-gold rounded-full flex items-center justify-center">
+                              <Check size={14} className="text-white" />
+                            </div>
+                          )}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+
+                  <button
+                    className={`ripple-button w-full py-4 rounded-xl font-black text-base active:scale-95 transition-all flex items-center justify-center gap-2 ${
+                      selectedSlot
+                        ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:shadow-lg hover:shadow-purple-500/30'
+                        : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    }`}
+                    disabled={!selectedSlot}
+                    onClick={() => selectedSlot && setPaymentStep('purchaseSlotPaymentGateway')}
+                  >
+                    <ShoppingBag size={18} />
+                    {selectedSlot ? `Proceed to Pay ${t('dashboard.omr')} ${selectedSlot.price}` : 'Select a Pass to Continue'}
+                  </button>
+                  <button className="w-full py-2 text-sm text-gray-400 font-bold hover:text-gray-600 transition-colors" onClick={() => setPaymentStep('qrLanding')}>← Back</button>
+                </div>
+              )}
+
+              {/* Slot Payment Gateway */}
+              {paymentStep === 'purchaseSlotPaymentGateway' && selectedSlot && (
+                <div className="space-y-5">
+                  {/* Summary */}
+                  <div className={`bg-gradient-to-br ${selectedSlot.color} rounded-xl p-4 text-white`}>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-white/70 text-xs font-bold uppercase tracking-wider">Purchasing</p>
+                        <h4 className="font-black text-xl">{selectedSlot.label}</h4>
+                        <p className="text-white/80 text-xs">{selectedSlot.duration} access · {scannedVehicleData?.vehicleNumber || scanVehicleInput}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-white/70 text-xs">Total</p>
+                        <p className="font-black text-2xl">{t('dashboard.omr')} {selectedSlot.price}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Same card fields */}
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Cardholder Name</label>
+                      <input type="text" className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-purple-400 bg-gray-50 focus:bg-white text-sm font-bold transition-all" placeholder="As on card" value={paymentGatewayData.name} onChange={(e) => { setPaymentGatewayData(p => ({ ...p, name: e.target.value })); setPaymentGatewayError(''); }} />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Card Number</label>
+                      <input type="text" className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-purple-400 bg-gray-50 focus:bg-white text-sm font-bold font-mono tracking-wider transition-all" placeholder="1234 5678 9012 3456" maxLength={19} value={paymentGatewayData.cardNumber} onChange={(e) => { const v = e.target.value.replace(/\D/g, '').slice(0, 16); const formatted = v.replace(/(.{4})/g, '$1 ').trim(); setPaymentGatewayData(p => ({ ...p, cardNumber: formatted })); setPaymentGatewayError(''); }} />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Expiry</label>
+                        <input type="text" className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-purple-400 bg-gray-50 focus:bg-white text-sm font-bold font-mono transition-all" placeholder="MM/YY" maxLength={5} value={paymentGatewayData.expiry} onChange={(e) => { let v = e.target.value.replace(/\D/g, '').slice(0, 4); if (v.length >= 3) v = v.slice(0,2) + '/' + v.slice(2); setPaymentGatewayData(p => ({ ...p, expiry: v })); setPaymentGatewayError(''); }} />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">CVV</label>
+                        <input type="password" className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-purple-400 bg-gray-50 focus:bg-white text-sm font-bold font-mono transition-all" placeholder="•••" maxLength={4} value={paymentGatewayData.cvv} onChange={(e) => { setPaymentGatewayData(p => ({ ...p, cvv: e.target.value.replace(/\D/g,'').slice(0,4) })); setPaymentGatewayError(''); }} />
+                      </div>
+                    </div>
+                  </div>
+
+                  {paymentGatewayError && (
+                    <p className="text-red-500 text-xs font-bold flex items-center gap-1.5"><X size={12} />{paymentGatewayError}</p>
+                  )}
+
+                  <button
+                    className="ripple-button w-full py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl font-black text-base hover:shadow-lg hover:shadow-purple-500/30 active:scale-95 transition-all flex items-center justify-center gap-2"
+                    onClick={() => handleGatewayPayment('purchaseProcessing')}
+                  >
+                    <Shield size={18} /> Pay {t('dashboard.omr')} {selectedSlot.price} Securely
+                  </button>
+                  <p className="text-center text-[10px] text-gray-400">🔒 256-bit SSL Encrypted · PCI DSS Compliant</p>
+                  <button className="w-full py-2 text-sm text-gray-400 font-bold hover:text-gray-600 transition-colors" onClick={() => setPaymentStep('purchaseParkingSlots')}>← Back</button>
+                </div>
+              )}
+
+              {/* Purchase Processing */}
+              {paymentStep === 'purchaseProcessing' && (() => {
+                const validFrom = new Date();
+                const validUntil = new Date();
+                if (selectedSlot?.id === 'daily') validUntil.setDate(validUntil.getDate() + 1);
+                else if (selectedSlot?.id === 'weekly') validUntil.setDate(validUntil.getDate() + 7);
+                else validUntil.setDate(validUntil.getDate() + 30);
+                setTimeout(() => setPaymentStep('slotPurchaseReceipt'), 2500);
+                return (
+                  <div className="flex flex-col items-center py-10 gap-6">
+                    <div className="relative w-24 h-24">
+                      <div className="absolute inset-0 rounded-full border-4 border-gray-100"></div>
+                      <div className="absolute inset-0 rounded-full border-4 border-t-purple-600 border-r-purple-600 border-b-transparent border-l-transparent animate-spin"></div>
+                      <div className="absolute inset-3 rounded-full bg-purple-50 flex items-center justify-center">
+                        <ShoppingBag size={24} className="text-purple-600" />
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <h4 className="font-black text-gray-800 text-lg">Activating Your Pass…</h4>
+                      <p className="text-gray-400 text-sm mt-1">Registering vehicle and slot details.</p>
+                    </div>
+                    <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+                      <div className="h-full bg-gradient-to-r from-purple-600 to-indigo-600 rounded-full animate-pulse" style={{ width: '60%' }}></div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Slot Purchase Receipt */}
+              {paymentStep === 'slotPurchaseReceipt' && selectedSlot && (() => {
+                const validFrom = new Date();
+                const validUntil = new Date();
+                if (selectedSlot?.id === 'daily') validUntil.setDate(validUntil.getDate() + 1);
+                else if (selectedSlot?.id === 'weekly') validUntil.setDate(validUntil.getDate() + 7);
+                else validUntil.setDate(validUntil.getDate() + 30);
+                const refNo = 'PSS-' + Date.now().toString().slice(-8);
+                return (
+                  <div className="py-2">
+                    {/* Success Banner */}
+                    <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl p-5 text-white mb-5 relative overflow-hidden">
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-8 translate-x-8"></div>
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+                          <Check size={24} className="text-white" />
+                        </div>
+                        <div>
+                          <h4 className="font-black text-xl">Pass Activated!</h4>
+                          <p className="text-green-100 text-xs">Your {selectedSlot.label} is now active</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Pass Card */}
+                    <div ref={receiptRef} className={`bg-gradient-to-br ${selectedSlot.color} rounded-2xl p-5 text-white relative overflow-hidden mb-5`}>
+                      <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -translate-y-12 translate-x-12"></div>
+                      <div className="mb-4">
+                        <p className="text-white/70 text-[10px] font-black uppercase tracking-widest">Silal Market Pro Parking</p>
+                        <h4 className="font-black text-2xl mt-1">{selectedSlot.label}</h4>
+                      </div>
+                      <div className="grid grid-cols-2 gap-y-3 text-sm">
+                        <div>
+                          <p className="text-white/60 text-[10px] font-black uppercase tracking-wider">Vehicle</p>
+                          <p className="font-black text-white">{scannedVehicleData?.vehicleNumber || scanVehicleInput}</p>
+                        </div>
+                        <div>
+                          <p className="text-white/60 text-[10px] font-black uppercase tracking-wider">Amount Paid</p>
+                          <p className="font-black text-white">{t('dashboard.omr')} {selectedSlot.price}</p>
+                        </div>
+                        <div>
+                          <p className="text-white/60 text-[10px] font-black uppercase tracking-wider">Valid From</p>
+                          <p className="font-bold text-white text-xs">{validFrom.toLocaleDateString('en-GB')}</p>
+                        </div>
+                        <div>
+                          <p className="text-white/60 text-[10px] font-black uppercase tracking-wider">Valid Until</p>
+                          <p className="font-bold text-white text-xs">{validUntil.toLocaleDateString('en-GB')}</p>
+                        </div>
+                      </div>
+                      <div className="mt-4 pt-3 border-t border-white/20">
+                        <p className="text-white/60 text-[10px] font-black uppercase tracking-wider">Reference</p>
+                        <p className="font-mono font-black text-white text-sm tracking-widest">{refNo}</p>
+                      </div>
+                    </div>
+
+                    {/* Download options */}
+                    <div className="grid grid-cols-3 gap-2 mb-4">
+                      <button className="p-3 bg-gray-50 hover:bg-gray-100 border border-gray-100 rounded-xl flex flex-col items-center gap-1 transition-all" onClick={handlePrintReceipt}>
+                        <Printer size={16} className="text-gray-600" />
+                        <span className="text-[10px] font-bold text-gray-600">Print</span>
+                      </button>
+                      <button className="p-3 bg-gray-50 hover:bg-gray-100 border border-gray-100 rounded-xl flex flex-col items-center gap-1 transition-all">
+                        <Download size={16} className="text-gray-600" />
+                        <span className="text-[10px] font-bold text-gray-600">Download</span>
+                      </button>
+                      <button className="p-3 bg-gray-50 hover:bg-gray-100 border border-gray-100 rounded-xl flex flex-col items-center gap-1 transition-all">
+                        <Mail size={16} className="text-gray-600" />
+                        <span className="text-[10px] font-bold text-gray-600">Email</span>
+                      </button>
+                    </div>
+
+                    <button
+                      className="ripple-button w-full py-3.5 bg-gradient-to-r from-premium-black to-[#1a1a1a] text-white rounded-xl font-bold hover:shadow-lg hover:shadow-black/20 active:scale-95 transition-all"
+                      onClick={() => { setShowScanModal(false); setScannedVehicleData(null); setPaymentStep('initial'); setSelectedSlot(null); setScanVehicleInput(''); setPaymentGatewayData({ cardNumber: '', expiry: '', cvv: '', name: '' }); }}
+                    >
+                      Done
+                    </button>
+                  </div>
+                );
+              })()}
 
               {paymentStep === 'methodOrWaiverSelection' && scannedVehicleData && (
                 <div className={`space-y-6 ${language === 'ar' ? 'text-right' : 'text-left'}`}> 

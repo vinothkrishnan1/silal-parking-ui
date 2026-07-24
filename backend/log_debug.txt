@@ -41,3 +41,12 @@
 [2026-07-21 18:01:13] Payment exit state updated: plate=AB1234, vehicle_id=1, status=out, exit_time=2026-07-21T12:31:13
 [2026-07-21 18:01:13] Payment barrier trigger start: plate=AB1234, source_ip=None, gate_name=None, payment_status=paid
 [2026-07-21 18:01:13] Boom barrier failed to open for paid visitor: Plate=AB1234. Error: No boom barrier device configured for source_ip=None gate_name=None
+[2026-07-21 18:07:18] Payment exit state updated: plate=AB1235, vehicle_id=2, status=out, exit_time=2026-07-21T12:37:18
+[2026-07-21 18:07:18] Payment barrier trigger start: plate=AB1235, source_ip=None, gate_name=None, payment_status=paid
+[2026-07-21 18:07:18] Boom barrier failed to open for paid visitor: Plate=AB1235. Error: No boom barrier device configured for source_ip=None gate_name=None
+[2026-07-21 18:08:35] Payment exit state updated: plate=AB1236, vehicle_id=3, status=out, exit_time=2026-07-21T12:38:35
+[2026-07-21 18:08:35] Payment barrier trigger start: plate=AB1236, source_ip=None, gate_name=None, payment_status=paid
+[2026-07-21 18:08:35] Boom barrier failed to open for paid visitor: Plate=AB1236. Error: No boom barrier device configured for source_ip=None gate_name=None
+[2026-07-21 18:09:31] Payment exit state updated: plate=AB1237, vehicle_id=4, status=out, exit_time=2026-07-21T12:39:31
+[2026-07-21 18:09:31] Payment barrier trigger start: plate=AB1237, source_ip=None, gate_name=None, payment_status=paid
+[2026-07-21 18:09:31] Boom barrier failed to open for paid visitor: Plate=AB1237. Error: No boom barrier device configured for source_ip=None gate_name=None
