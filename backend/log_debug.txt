@@ -89,3 +89,9 @@
 [2026-07-24 23:08:56] Payment exit state updated: plate=LIBERO TEMPORA QUO M, vehicle_id=3, status=out, exit_time=2026-07-24T17:38:57
 [2026-07-24 23:08:56] Payment barrier trigger start: plate=LIBERO TEMPORA QUO M, source_ip=None, gate_name=None, payment_status=waived
 [2026-07-24 23:08:56] Boom barrier failed to open for paid visitor: Plate=LIBERO TEMPORA QUO M. Error: No boom barrier device configured for source_ip=None gate_name=None
+[2026-07-26 00:00:08] Payment exit state updated: plate=AUT EST ATQUE SEQUI, vehicle_id=1, status=out, exit_time=2026-07-25T18:30:08.476637
+[2026-07-26 00:00:08] Payment barrier trigger start: plate=AUT EST ATQUE SEQUI, source_ip=None, gate_name=None, payment_status=waived
+[2026-07-26 00:00:08] Boom barrier failed to open for paid visitor: Plate=AUT EST ATQUE SEQUI. Error: No boom barrier device configured for source_ip=None gate_name=None
+[2026-07-26 00:06:50] Payment exit state updated: plate=TN1234, vehicle_id=2, status=out, exit_time=2026-07-25T18:36:50.623758
+[2026-07-26 00:06:50] Payment barrier trigger start: plate=TN1234, source_ip=None, gate_name=None, payment_status=waived
+[2026-07-26 00:06:50] Boom barrier failed to open for paid visitor: Plate=TN1234. Error: No boom barrier device configured for source_ip=None gate_name=None

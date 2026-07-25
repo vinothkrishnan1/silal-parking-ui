@@ -307,8 +307,20 @@ def add_subscription():
                     plate = plate.upper()
                     new_veh = VisitorVehicle(visitor_id=visitor.id, license_plate=plate)
                     db.session.add(new_veh)
-                        
         db.session.commit()
+
+        # Update any open vehicle entries for these plates to 'waived'
+        if vehicles_list is not None and isinstance(vehicles_list, list):
+            for plate in vehicles_list:
+                plate = _normalize_text(plate)
+                if plate:
+                    clean_p = plate.upper().replace(' ', '')
+                    Vehicle.query.filter(
+                        func.replace(func.lower(Vehicle.license_plate), ' ', '') == clean_p.lower(),
+                        Vehicle.status == 'in'
+                    ).update({Vehicle.payment_status: 'waived'}, synchronize_session=False)
+            db.session.commit()
+
         try:
             from services.parking_broadcast import broadcast_slot_status
             broadcast_slot_status()

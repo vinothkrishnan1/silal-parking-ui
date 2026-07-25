@@ -52,6 +52,8 @@ const VehicleDetails = () => {
   const [purchaseCustomerPhone, setPurchaseCustomerPhone] = useState('');
   const [purchaseCompanyName, setPurchaseCompanyName] = useState('');
   const [purchaseBuildingNumber, setPurchaseBuildingNumber] = useState('');
+  const [purchaseHouseNumber, setPurchaseHouseNumber] = useState('');
+  const [purchaseBlock, setPurchaseBlock] = useState('');
   const [pricingPlans, setPricingPlans] = useState([]);
   const [pricingLoading, setPricingLoading] = useState(false);
 
@@ -163,6 +165,8 @@ const VehicleDetails = () => {
             phone_number: customerPhone,
             company_name: purchaseCompanyName.trim() || undefined,
             building_number: purchaseBuildingNumber.trim() || undefined,
+            house_number: purchaseHouseNumber.trim() || undefined,
+            block: purchaseBlock.trim() || undefined,
             location_id: locId,
             vehicles: [vehiclePlate],
             start_date: todayStr,
@@ -397,7 +401,16 @@ const VehicleDetails = () => {
       setScanVehicleError('Please enter your full name.');
       return;
     }
+    if (!purchaseCustomerPhone.trim()) {
+      setScanVehicleError('Please enter your phone number.');
+      return;
+    }
+    if (purchaseCustomerPhone.trim().length !== 8) {
+      setScanVehicleError('Phone number must be exactly 8 digits.');
+      return;
+    }
     if (!selectedSlot) {
+      setScanVehicleError('Please select a parking pass plan.');
       return;
     }
     setScanVehicleError('');
@@ -1665,34 +1678,68 @@ const VehicleDetails = () => {
                       </div>
                     </div>
                     <div>
-                      <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Full Name</label>
+                      <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Full Name *</label>
                       <input
                         type="text"
                         className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-purple-400 bg-white text-sm font-bold transition-all"
-                        placeholder="Enter your name"
+                        placeholder="Enter your full name"
                         value={purchaseCustomerName}
                         onChange={(e) => { setPurchaseCustomerName(e.target.value); setScanVehicleError(''); }}
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Company Name</label>
+                      <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Phone Number *</label>
                       <input
                         type="text"
                         className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-purple-400 bg-white text-sm font-bold transition-all"
-                        placeholder="Enter company name"
-                        value={purchaseCompanyName}
-                        onChange={(e) => { setPurchaseCompanyName(e.target.value); setScanVehicleError(''); }}
+                        placeholder="8-digit phone number (e.g. 90000000)"
+                        value={purchaseCustomerPhone}
+                        onChange={(e) => { setPurchaseCustomerPhone(e.target.value.replace(/\D/g, '').slice(0, 8)); setScanVehicleError(''); }}
                       />
                     </div>
-                    <div>
-                      <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Building Number</label>
-                      <input
-                        type="text"
-                        className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-purple-400 bg-white text-sm font-bold transition-all"
-                        placeholder="Enter building number"
-                        value={purchaseBuildingNumber}
-                        onChange={(e) => { setPurchaseBuildingNumber(e.target.value); setScanVehicleError(''); }}
-                      />
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Company Name</label>
+                        <input
+                          type="text"
+                          className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-purple-400 bg-white text-sm font-bold transition-all"
+                          placeholder="Company name"
+                          value={purchaseCompanyName}
+                          onChange={(e) => { setPurchaseCompanyName(e.target.value); setScanVehicleError(''); }}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Building Number</label>
+                        <input
+                          type="text"
+                          className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-purple-400 bg-white text-sm font-bold transition-all"
+                          placeholder="Building #"
+                          value={purchaseBuildingNumber}
+                          onChange={(e) => { setPurchaseBuildingNumber(e.target.value); setScanVehicleError(''); }}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">House / Flat #</label>
+                        <input
+                          type="text"
+                          className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-purple-400 bg-white text-sm font-bold transition-all"
+                          placeholder="House #"
+                          value={purchaseHouseNumber}
+                          onChange={(e) => { setPurchaseHouseNumber(e.target.value); setScanVehicleError(''); }}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Block</label>
+                        <input
+                          type="text"
+                          className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-purple-400 bg-white text-sm font-bold transition-all"
+                          placeholder="Block #"
+                          value={purchaseBlock}
+                          onChange={(e) => { setPurchaseBlock(e.target.value); setScanVehicleError(''); }}
+                        />
+                      </div>
                     </div>
                     {scanVehicleError && (
                       <p className="text-red-500 text-xs font-bold flex items-center gap-1.5 pt-1"><X size={12} />{scanVehicleError}</p>

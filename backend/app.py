@@ -25,6 +25,7 @@ from routes.visitor_routes import visitor_bp
 from routes.payment_routes import payment_bp
 from services.parking_broadcast import broadcast_slot_status
 from services.subscription_status_service import register_subscription_status_lifespan
+import models
 from models import DeviceConfig
 from debug_logger import log_info
 from sqlalchemy import func
@@ -41,11 +42,9 @@ def create_app():
     db.init_app(app)
     socketio.init_app(app)
 
-    db_path = r'C:\ProgramData\MySQL\MySQL Server 9.3\Data\pro_parking'
     with app.app_context():
-        if db.engine.url.drivername == 'sqlite' and not os.path.exists(db_path):
-            db.create_all()
-            print("Database created.")
+        db.create_all()
+        print("Database schema verified.")
 
     app.register_blueprint(auth_bp, url_prefix='/auth')
     app.register_blueprint(tenant_bp, url_prefix='/api/tenants')

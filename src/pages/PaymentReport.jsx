@@ -240,7 +240,21 @@ const PaymentReport = () => {
               </div>
               {[
                 { label: t('paymentReports.vehicleNumber'), value: vehicleNumberFilter, setter: setVehicleNumberFilter, type: 'text', placeholder: t('paymentReports.enterVehicleNumber') },
-                { label: t('paymentReports.paymentType'), value: paymentTypeFilter, setter: setPaymentTypeFilter, type: 'select', options: ['all', 'visitor', 'tenant'], allLabel: t('paymentReports.allPayments'), customLabel: (opt) => opt === 'visitor' ? t('paymentReports.visitorPayments') : opt === 'tenant' ? t('paymentReports.tenantPayments') : opt },
+                { 
+                  label: t('paymentReports.paymentType'), 
+                  value: paymentTypeFilter, 
+                  setter: setPaymentTypeFilter, 
+                  type: 'select', 
+                  options: ['all', 'gate', 'subscription', 'visitor', 'tenant'], 
+                  allLabel: t('paymentReports.allPayments'), 
+                  customLabel: (opt) => {
+                    if (opt === 'gate') return 'Gate Stays Only (Physical Entries)';
+                    if (opt === 'subscription') return 'Subscriptions Only (Pass Payments)';
+                    if (opt === 'visitor') return t('paymentReports.visitorPayments');
+                    if (opt === 'tenant') return t('paymentReports.tenantPayments');
+                    return opt;
+                  } 
+                },
                 { label: t('paymentReports.paymentStatus'), value: paymentStatusFilter, setter: setPaymentStatusFilter, type: 'select', options: uniquePaymentStatuses, allLabel: t('paymentReports.allStatuses') },
                 { label: t('paymentReports.paymentMode'), value: paymentModeFilter, setter: setPaymentModeFilter, type: 'select', options: uniquePaymentModes, allLabel: t('paymentReports.allPaymentModes') },
                 { label: t('paymentReports.collectedBy'), value: staffFilter, setter: setStaffFilter, type: 'select', options: uniqueStaffMembers, allLabel: t('paymentReports.allStaffMembers') }
@@ -296,15 +310,32 @@ const PaymentReport = () => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-50">
               {currentItems.map((v, index) => {
-                const duration = v.exitTime
-                  ? (v.duration || computeDuration(v.entryTime, v.exitTime, t))
-                  : computeDuration(v.entryTime, null, t);
+                const isSub = v.id?.startsWith('sub_') || v.id?.startsWith('vis_sub_') || (v.type && v.type.includes('Subscription'));
+                const duration = isSub 
+                  ? `${v.duration || '30 days'} (Pass)`
+                  : (v.exitTime ? (v.duration || computeDuration(v.entryTime, v.exitTime, t)) : computeDuration(v.entryTime, null, t));
+
                 return (
                   <tr key={v.id} className={`hover:bg-gray-50/50 transition-colors ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
                     <td className={`px-6 py-5 whitespace-nowrap text-sm font-medium text-gray-500 ${language === 'ar' ? 'text-right' : ''}`}>{indexOfFirstItem + index + 1}</td>
-                    <td className={`px-6 py-5 whitespace-nowrap font-black text-gray-900 tracking-tight ${language === 'ar' ? 'text-right' : ''}`}>{v.vehicleNumber}</td>
-                    <td className={`px-6 py-5 whitespace-nowrap text-sm font-bold text-gray-600 ${language === 'ar' ? 'text-right' : ''}`}>{formatAppDateTime(v.entryTime, v.entryTime)}</td>
-                    <td className={`px-6 py-5 whitespace-nowrap text-sm font-bold text-gray-600 ${language === 'ar' ? 'text-right' : ''}`}>{v.exitTime ? formatAppDateTime(v.exitTime, v.exitTime) : '-'}</td>
+                    <td className={`px-6 py-5 whitespace-nowrap font-black text-gray-900 tracking-tight ${language === 'ar' ? 'text-right' : ''}`}>
+                      <div className="flex flex-col">
+                        <span>{v.vehicleNumber}</span>
+                        <span className="mt-0.5">
+                          {isSub ? (
+                            <span className="inline-block px-2 py-0.5 text-[10px] font-extrabold rounded bg-amber-100 text-amber-900 border border-amber-200/60">Subscription Pass</span>
+                          ) : (
+                            <span className="inline-block px-2 py-0.5 text-[10px] font-extrabold rounded bg-blue-50 text-blue-700 border border-blue-100">Gate Entry</span>
+                          )}
+                        </span>
+                      </div>
+                    </td>
+                    <td className={`px-6 py-5 whitespace-nowrap text-sm font-bold text-gray-600 ${language === 'ar' ? 'text-right' : ''}`}>
+                      {isSub ? <span className="text-gray-500 text-xs font-normal">Sub Start: <br/><strong className="text-gray-700">{formatAppDateTime(v.entryTime, v.entryTime)}</strong></span> : formatAppDateTime(v.entryTime, v.entryTime)}
+                    </td>
+                    <td className={`px-6 py-5 whitespace-nowrap text-sm font-bold text-gray-600 ${language === 'ar' ? 'text-right' : ''}`}>
+                      {isSub ? <span className="text-gray-500 text-xs font-normal">Sub End: <br/><strong className="text-gray-700">{v.exitTime ? formatAppDateTime(v.exitTime, v.exitTime) : '-'}</strong></span> : (v.exitTime ? formatAppDateTime(v.exitTime, v.exitTime) : '-')}
+                    </td>
                     <td className={`px-6 py-5 whitespace-nowrap font-black text-gray-900 ${language === 'ar' ? 'text-right' : ''}`}>{v.paymentAmount === '-' ? '-' : <span className="text-gradient-gold drop-shadow-sm">{v.paymentAmount} {t('dashboard.omr')}</span>}</td>
                     <td className={`px-6 py-5 whitespace-nowrap ${language === 'ar' ? 'text-right' : ''}`}>{getPaymentStatusBadge(v.paymentStatus)}</td>
                     <td className={`px-6 py-5 whitespace-nowrap ${language === 'ar' ? 'text-right' : ''}`}>{getPaymentModeBadge(v.paymentMode)}</td>

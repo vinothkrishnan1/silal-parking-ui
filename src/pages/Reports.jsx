@@ -248,19 +248,39 @@ const Reports = () => {
     URL.revokeObjectURL(url);
   };
 
-  const getStatusBadge = (exitTime) => exitTime ?
-    <span className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800">{language === 'ar' ? 'خرج' : 'Exited'}</span> :
-    <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">{language === 'ar' ? 'بالداخل' : 'Inside'}</span>;
+  const getStatusBadge = (vehicle) => {
+    const isSub = vehicle?.recordCategory === 'Subscription' || vehicle?.type?.includes('Subscription') || vehicle?.id?.startsWith('vis_sub_') || vehicle?.id?.startsWith('sub_');
+    if (isSub) {
+      const statusStr = vehicle?.status || 'Active';
+      const isExpired = statusStr.toLowerCase() === 'expired';
+      const isInactive = statusStr.toLowerCase() === 'inactive';
+      
+      let badgeColor = 'bg-green-100 text-green-800 border border-green-200';
+      if (isExpired) badgeColor = 'bg-red-100 text-red-800 border border-red-200';
+      else if (isInactive) badgeColor = 'bg-gray-100 text-gray-800 border border-gray-200';
+      
+      return <span className={`px-2.5 py-1 text-xs rounded-full font-bold ${badgeColor}`}>{statusStr}</span>;
+    }
+
+    return vehicle?.exitTime ?
+      <span className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800">{language === 'ar' ? 'خرج' : 'Exited'}</span> :
+      <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">{language === 'ar' ? 'بالداخل' : 'Inside'}</span>;
+  };
 
   const getTypeBadge = (type) => {
-    const typeKey = type ? type.charAt(0).toUpperCase() + type.slice(1).toLowerCase() : 'Visitor';
+    if (!type) return <span className="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800 font-bold">Visitor</span>;
+    
+    if (type.includes('Subscription')) {
+      return <span className="px-2.5 py-1 text-xs rounded-full font-bold bg-amber-100 text-amber-900 border border-amber-200">{type}</span>;
+    }
+
+    const typeKey = type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
     const colors = {
       'Staff': 'bg-blue-100 text-primary-blue',
       'Tenant': 'bg-purple-100 text-purple-800',
       'Visitor': 'bg-yellow-100 text-yellow-800'
     };
-    const displayType = t(`dashboard.${typeKey.toLowerCase()}`) || typeKey;
-    return <span className={`px-2 py-1 text-xs rounded-full ${colors[typeKey] || 'bg-gray-100 text-gray-800'}`}>{displayType}</span>;
+    return <span className={`px-2 py-1 text-xs rounded-full font-bold ${colors[typeKey] || 'bg-gray-100 text-gray-800'}`}>{type}</span>;
   };
 
   const getPaymentMethodBadge = (method) => {
@@ -505,10 +525,10 @@ const Reports = () => {
                         <span>{vehicle.location || '-'}</span>
                       </div>
                     </td>
-                    <td className={`px-6 py-5 whitespace-nowrap ${language === 'ar' ? 'text-right' : ''}`}>{getStatusBadge(vehicle.exitTime)}</td>
+                    <td className={`px-6 py-5 whitespace-nowrap ${language === 'ar' ? 'text-right' : ''}`}>{getStatusBadge(vehicle)}</td>
                     <td className={`px-6 py-5 whitespace-nowrap text-sm font-black text-gray-700 ${language === 'ar' ? 'text-right' : ''}`}>{duration}</td>
-                    <td className={`px-6 py-5 whitespace-nowrap ${language === 'ar' ? 'text-right' : ''}`}>{vehicle.exitTime ? getPaymentMethodBadge(vehicle.paymentMethod) : '-'}</td>
-                    <td className={`px-6 py-5 whitespace-nowrap ${language === 'ar' ? 'text-right' : ''}`}>{vehicle.exitTime ? (['Staff', 'Tenant'].includes(vehicle.type) ? <span className="text-gray-400 text-[10px] font-black uppercase tracking-widest">N/A</span> : <span className="font-black text-gradient-gold drop-shadow-sm">{vehicle.paymentAmount || '0.000'}</span>) : '-'}</td>
+                    <td className={`px-6 py-5 whitespace-nowrap ${language === 'ar' ? 'text-right' : ''}`}>{getPaymentMethodBadge(vehicle.paymentMethod || vehicle.paymentMode)}</td>
+                    <td className={`px-6 py-5 whitespace-nowrap ${language === 'ar' ? 'text-right' : ''}`}>{['Staff', 'Tenant'].includes(vehicle.type) ? <span className="text-gray-400 text-[10px] font-black uppercase tracking-widest">N/A</span> : <span className="font-black text-gradient-gold drop-shadow-sm">{vehicle.paymentAmount || '0.000'}</span>}</td>
                   </tr>
                 );
               })}
