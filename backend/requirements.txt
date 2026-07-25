@@ -8,4 +8,4 @@ flask-cors
 python-barcode
 requests
 PyMySQL
-gunicorn
+gunicorn==24.3.0
