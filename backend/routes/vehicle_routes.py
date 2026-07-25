@@ -153,7 +153,7 @@ def check_registration():
                 })
                 
         # 2. Check Visitor Subscription
-        vis_sub = db.session.query(VisitorSubscription).join(VisitorVehicle).filter(
+        vis_sub = db.session.query(VisitorSubscription).join(VisitorVehicle, VisitorSubscription.visitor_id == VisitorVehicle.visitor_id).filter(
             func.replace(func.lower(VisitorVehicle.license_plate), ' ', '') == clean_plate,
             VisitorSubscription.start_date <= today,
             VisitorSubscription.end_date >= today,
@@ -167,9 +167,10 @@ def check_registration():
             })
             
         # 3. Check Tenant Subscription
-        tenant_sub = db.session.query(TenantSubscription).join(TenantVehicle).filter(
+        tenant_sub = db.session.query(TenantSubscription).join(TenantVehicle, TenantSubscription.tenant_id == TenantVehicle.tenant_id).filter(
             func.replace(func.lower(TenantVehicle.license_plate), ' ', '') == clean_plate,
             TenantSubscription.start_date <= today,
+
             TenantSubscription.end_date >= today,
             TenantSubscription.status == 'active'
         ).first()
