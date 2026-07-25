@@ -127,7 +127,13 @@ const Reports = () => {
       if (exitDateStr !== columnFilters.exitDate) return false;
     }
     if (columnFilters.type !== 'all') {
-      if ((vehicle.type || '').toLowerCase() !== columnFilters.type.toLowerCase()) return false;
+      const typeVal = (vehicle.type || '').toLowerCase();
+      const filterVal = columnFilters.type.toLowerCase();
+      if (filterVal === 'subscriber') {
+        if (!typeVal.includes('sub') && typeVal !== 'subscriber') return false;
+      } else if (typeVal !== filterVal) {
+        return false;
+      }
     }
     if (columnFilters.location !== 'all') {
       const locName = vehicle.location || '';
@@ -268,19 +274,21 @@ const Reports = () => {
   };
 
   const getTypeBadge = (type) => {
-    if (!type) return <span className="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800 font-bold">Visitor</span>;
+    if (!type) return <span className="px-2.5 py-1 text-xs rounded-full font-bold bg-yellow-100 text-yellow-800 border border-yellow-200">Visitor</span>;
     
-    if (type.includes('Subscription')) {
-      return <span className="px-2.5 py-1 text-xs rounded-full font-bold bg-amber-100 text-amber-900 border border-amber-200">{type}</span>;
+    const normalized = String(type).trim().toLowerCase();
+    
+    if (normalized === 'staff') {
+      return <span className="px-2.5 py-1 text-xs rounded-full font-bold bg-blue-100 text-blue-800 border border-blue-200">{language === 'ar' ? 'موظف' : 'Staff'}</span>;
+    }
+    if (normalized === 'subscriber' || normalized.includes('sub')) {
+      return <span className="px-2.5 py-1 text-xs rounded-full font-bold bg-amber-100 text-amber-900 border border-amber-200">{language === 'ar' ? 'مشترك' : 'Subscriber'}</span>;
+    }
+    if (normalized === 'tenant') {
+      return <span className="px-2.5 py-1 text-xs rounded-full font-bold bg-purple-100 text-purple-800 border border-purple-200">{language === 'ar' ? 'مستأجر' : 'Tenant'}</span>;
     }
 
-    const typeKey = type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
-    const colors = {
-      'Staff': 'bg-blue-100 text-primary-blue',
-      'Tenant': 'bg-purple-100 text-purple-800',
-      'Visitor': 'bg-yellow-100 text-yellow-800'
-    };
-    return <span className={`px-2 py-1 text-xs rounded-full font-bold ${colors[typeKey] || 'bg-gray-100 text-gray-800'}`}>{type}</span>;
+    return <span className="px-2.5 py-1 text-xs rounded-full font-bold bg-yellow-100 text-yellow-800 border border-yellow-200">{language === 'ar' ? 'زائر' : 'Visitor'}</span>;
   };
 
   const getPaymentMethodBadge = (method) => {
@@ -434,6 +442,7 @@ const Reports = () => {
                   >
                     <option value="all">{language === 'ar' ? 'الكل' : 'All Types'}</option>
                     <option value="Visitor">{language === 'ar' ? 'زائر' : 'Visitor'}</option>
+                    <option value="Subscriber">{language === 'ar' ? 'مشترك' : 'Subscriber'}</option>
                     <option value="Staff">{language === 'ar' ? 'موظف' : 'Staff'}</option>
                     <option value="Tenant">{language === 'ar' ? 'مستأجر' : 'Tenant'}</option>
                   </select>

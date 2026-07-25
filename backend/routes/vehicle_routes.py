@@ -344,34 +344,43 @@ def get_reports():
                 
                 # Check if vehicle entry is covered by an active visitor or tenant subscription
                 effective_payment_status = v.payment_status.capitalize() if v.payment_status else 'Pending'
-                if v.payment_status in ('not paid', 'pending', None) and v.entry_time:
-                    entry_date = v.entry_time.date()
-                    clean_plate = v.license_plate.replace(' ', '').lower() if v.license_plate else ''
-                    
-                    from models import VisitorSubscription, VisitorVehicle, TenantSubscription, TenantVehicle
-                    has_vis_sub = db.session.query(VisitorSubscription).join(VisitorVehicle, VisitorSubscription.visitor_id == VisitorVehicle.visitor_id).filter(
-                        func.replace(func.lower(VisitorVehicle.license_plate), ' ', '') == clean_plate,
-                        VisitorSubscription.start_date <= entry_date,
-                        VisitorSubscription.end_date >= entry_date,
-                        VisitorSubscription.status == 'active'
-                    ).first()
-                    
-                    has_tenant_sub = db.session.query(TenantSubscription).join(TenantVehicle, TenantSubscription.tenant_id == TenantVehicle.tenant_id).filter(
-                        func.replace(func.lower(TenantVehicle.license_plate), ' ', '') == clean_plate,
-                        TenantSubscription.start_date <= entry_date,
-                        TenantSubscription.end_date >= entry_date,
-                        TenantSubscription.status == 'active'
-                    ).first() if not has_vis_sub else None
-                    
-                    if has_vis_sub or has_tenant_sub:
-                        effective_payment_status = 'Waived'
-                    
+                entry_date = v.entry_time.date() if v.entry_time else datetime.utcnow().date()
+                clean_plate = v.license_plate.replace(' ', '').lower() if v.license_plate else ''
+                
+                from models import VisitorSubscription, VisitorVehicle, TenantSubscription, TenantVehicle
+                has_vis_sub = db.session.query(VisitorSubscription).join(VisitorVehicle, VisitorSubscription.visitor_id == VisitorVehicle.visitor_id).filter(
+                    func.replace(func.lower(VisitorVehicle.license_plate), ' ', '') == clean_plate,
+                    VisitorSubscription.start_date <= entry_date,
+                    VisitorSubscription.end_date >= entry_date,
+                    VisitorSubscription.status == 'active'
+                ).first()
+                
+                has_tenant_sub = db.session.query(TenantSubscription).join(TenantVehicle, TenantSubscription.tenant_id == TenantVehicle.tenant_id).filter(
+                    func.replace(func.lower(TenantVehicle.license_plate), ' ', '') == clean_plate,
+                    TenantSubscription.start_date <= entry_date,
+                    TenantSubscription.end_date >= entry_date,
+                    TenantSubscription.status == 'active'
+                ).first() if not has_vis_sub else None
+                
+                if (has_vis_sub or has_tenant_sub) and v.payment_status in ('not paid', 'pending', None):
+                    effective_payment_status = 'Waived'
+
+                cat_lower = (v.vehicle_category or 'visitor').strip().lower()
+                if cat_lower in ('staff', 'employee'):
+                    v_type = 'Staff'
+                elif cat_lower in ('subscriber', 'subscription') or has_vis_sub or has_tenant_sub:
+                    v_type = 'Subscriber'
+                elif cat_lower in ('tenant',):
+                    v_type = 'Tenant'
+                else:
+                    v_type = 'Visitor'
+                
                 result.append({
                     'id': f"vehicle_{v.id}",
                     'vehicleNumber': v.license_plate,
                     'entryTime': v.entry_time.strftime('%Y-%m-%d %H:%M:%S') if v.entry_time else None,
                     'exitTime': v.exit_time.strftime('%Y-%m-%d %H:%M:%S') if v.exit_time else None,
-                    'type': v.vehicle_category or 'Visitor',
+                    'type': v_type,
                     'recordCategory': 'Gate Entry',
                     'status': 'Exited' if v.exit_time else 'Inside',
                     'duration': duration_str,

@@ -1719,28 +1719,6 @@ const VehicleDetails = () => {
                         />
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">House / Flat #</label>
-                        <input
-                          type="text"
-                          className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-purple-400 bg-white text-sm font-bold transition-all"
-                          placeholder="House #"
-                          value={purchaseHouseNumber}
-                          onChange={(e) => { setPurchaseHouseNumber(e.target.value); setScanVehicleError(''); }}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Block</label>
-                        <input
-                          type="text"
-                          className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-purple-400 bg-white text-sm font-bold transition-all"
-                          placeholder="Block #"
-                          value={purchaseBlock}
-                          onChange={(e) => { setPurchaseBlock(e.target.value); setScanVehicleError(''); }}
-                        />
-                      </div>
-                    </div>
                     {scanVehicleError && (
                       <p className="text-red-500 text-xs font-bold flex items-center gap-1.5 pt-1"><X size={12} />{scanVehicleError}</p>
                     )}
