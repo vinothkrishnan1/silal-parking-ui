@@ -330,6 +330,8 @@ const Dashboard = () => {
               icon={<Users size={20} className="text-premium-gold" />}
               occupied={slotData.visitor?.occupied || 0}
               reserved={slotData.visitor?.reserved || 0}
+              available={slotData.visitor?.available || 0}
+              showAvailable={true}
               occupancyRate={slotData.visitor?.occupancy_rate || 0}
               language={language}
             />

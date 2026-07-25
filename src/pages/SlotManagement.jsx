@@ -134,7 +134,7 @@ const SlotManagement = () => {
     );
   }
 
-  const SlotCard = ({ title, data, icon, themeAccent, subtitle, hideTotalAndAvailable = false }) => {
+  const SlotCard = ({ title, data, icon, themeAccent, subtitle, hideTotalAndAvailable = false, showAvailable = false }) => {
     if (!data) return null;
 
     const isDark = themeAccent === 'dark';
@@ -168,8 +168,8 @@ const SlotManagement = () => {
         </div>
 
         <div className="p-8">
-          <div className={`grid ${hideTotalAndAvailable ? 'grid-cols-2' : 'grid-cols-3'} gap-6 mb-8`}>
-            {!hideTotalAndAvailable && (
+          <div className={`grid ${(hideTotalAndAvailable && !showAvailable) ? 'grid-cols-2' : 'grid-cols-3'} gap-6 mb-8`}>
+            {(!hideTotalAndAvailable || showAvailable) && (
               <div className="text-center group-hover:bg-gray-50/80 p-4 rounded-xl transition-colors">
                 <p className="text-[11px] text-gray-400 uppercase tracking-wider font-bold mb-2">{t('slotManagement.available')}</p>
                 <p className={`text-3xl font-black ${groupHoverColor} transition-colors text-gray-800`}>{data.available}</p>
@@ -297,6 +297,7 @@ const SlotManagement = () => {
           icon={<Users size={22} />}
           themeAccent="dark"
           hideTotalAndAvailable={true}
+          showAvailable={true}
         />
         <SlotCard
           title="Staff Pass Zone"
