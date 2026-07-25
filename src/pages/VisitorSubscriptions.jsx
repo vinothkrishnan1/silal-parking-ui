@@ -478,7 +478,7 @@ const VisitorVehicles = () => {
       sortSubscriptionsNewestFirst(
         visitors.map((visitor) => ({
           ...visitor,
-          statusMeta: getSubscriptionStatusMeta(visitor, currentTime),
+          statusMeta: getSubscriptionStatusMeta(visitor, currentTime, t),
           planName: planNameById.get(String(visitor.subscription_plan_id)) || 'Custom Plan'
         }))
       ),

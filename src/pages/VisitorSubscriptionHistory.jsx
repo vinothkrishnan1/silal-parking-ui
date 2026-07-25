@@ -149,7 +149,7 @@ const VisitorSubscriptionHistory = () => {
     const enrichedRows = subscriptions.map((subscription) => {
       const matchedPlan = plans.find((plan) => String(plan.id) === String(subscription.subscription_plan_id));
       const matchedVisitor = masterVisitors.find((visitor) => visitor.id === subscription.visitor_id);
-      const statusMeta = getSubscriptionStatusMeta(subscription, currentTime);
+      const statusMeta = getSubscriptionStatusMeta(subscription, currentTime, t);
 
       return {
         ...subscription,

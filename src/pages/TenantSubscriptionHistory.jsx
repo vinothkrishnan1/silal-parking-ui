@@ -149,7 +149,7 @@ const TenantSubscriptionHistory = () => {
     const enrichedRows = subscriptions.map((subscription) => {
       const matchedPlan = plans.find((plan) => String(plan.id) === String(subscription.subscription_plan_id));
       const matchedTenant = masterTenants.find((tenant) => tenant.id === subscription.tenant_id);
-      const statusMeta = getSubscriptionStatusMeta(subscription, currentTime);
+      const statusMeta = getSubscriptionStatusMeta(subscription, currentTime, t);
 
       return {
         ...subscription,

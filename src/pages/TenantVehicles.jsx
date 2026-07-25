@@ -414,7 +414,7 @@ const TenantVehicles = () => {
       sortSubscriptionsNewestFirst(
         tenants.map((tenant) => ({
           ...tenant,
-          statusMeta: getSubscriptionStatusMeta(tenant, currentTime),
+          statusMeta: getSubscriptionStatusMeta(tenant, currentTime, t),
           planName: planNameById.get(String(tenant.subscription_plan_id)) || 'Custom Plan'
         }))
       ),

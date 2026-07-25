@@ -32,16 +32,51 @@ export const LanguageProvider = ({ children }) => {
   };
 
   // Helper function to get nested translation keys
-  const t = (path) => {
+  const t = (path, variables = {}) => {
+    if (typeof path !== 'string') return path;
     const keys = path.split('.');
+    
+    // Attempt to get translation in current language
     let result = translations[language];
     for (const key of keys) {
-      if (result && result[key]) {
+      if (result && result[key] !== undefined) {
         result = result[key];
       } else {
-        return path; // Fallback to key itself
+        result = undefined;
+        break;
       }
     }
+    
+    // Fallback to english if missing in current language
+    if (result === undefined && language !== 'en') {
+      result = translations['en'];
+      for (const key of keys) {
+        if (result && result[key] !== undefined) {
+          result = result[key];
+        } else {
+          result = undefined;
+          break;
+        }
+      }
+    }
+
+    // If completely missing, return a human-readable fallback and log warning
+    if (result === undefined) {
+      console.warn(`[i18n] Missing translation for key: "${path}"`);
+      const lastKey = keys[keys.length - 1];
+      result = lastKey
+        .replace(/([A-Z])/g, ' $1')
+        .replace(/^./, (str) => str.toUpperCase());
+    }
+
+    // Handle Interpolation
+    if (typeof result === 'string') {
+      return result.replace(/\{\{\s*(\w+)\s*\}\}|\{\s*(\w+)\s*\}/g, (match, p1, p2) => {
+        const key = p1 || p2;
+        return variables[key] !== undefined ? variables[key] : match;
+      });
+    }
+
     return result;
   };
 
