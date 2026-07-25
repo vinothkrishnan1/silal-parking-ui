@@ -44,12 +44,12 @@ def process_payment():
             vehicle.payment_status = 'paid'
             vehicle.payment_mode = 'card'
             vehicle.payable_amount = amount_float
-            vehicle.payment_processed_at = datetime.now()
+            vehicle.payment_processed_at = datetime.utcnow()
             
             # If we want to mark the vehicle as out right away
             vehicle.status = 'out'
             if not vehicle.exit_time:
-                vehicle.exit_time = datetime.now()
+                vehicle.exit_time = datetime.utcnow()
             if not vehicle.duration and vehicle.entry_time and vehicle.exit_time:
                 vehicle.duration = vehicle.exit_time - vehicle.entry_time
                 
