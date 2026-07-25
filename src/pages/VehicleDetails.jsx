@@ -929,7 +929,11 @@ const VehicleDetails = () => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 my-4">
+                <div className="grid grid-cols-3 gap-3 my-4">
+                  <div className="text-center p-3 bg-gray-50/70 rounded-xl group-hover:bg-white transition-colors border border-premium-gold/10">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1">{t('slotManagement.available') || 'AVAILABLE'}</p>
+                    <p className="text-xl font-black text-premium-gold">{slotData.visitor?.available || 0}</p>
+                  </div>
                   <div className="text-center p-3 bg-gray-50/70 rounded-xl group-hover:bg-white transition-colors">
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1">{t('slotManagement.occupied') || 'OCCUPIED'}</p>
                     <p className="text-xl font-black text-gray-800">{slotData.visitor?.occupied || 0}</p>
