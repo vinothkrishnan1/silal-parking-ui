@@ -78,7 +78,7 @@ def _resolve_requested_status(data, default=SUBSCRIPTION_STATUS_ACTIVE):
 def _parse_subscription_date(value, field_name, default_today=False):
     if value in (None, ''):
         if default_today:
-            return datetime.utcnow().date()
+            return datetime.now().date()
         return None
 
     try:
@@ -472,7 +472,7 @@ def check_visitor():
         return jsonify({"status": "not_found", "message": "Vehicle not in Master List"}), 404
 
     # 2. Subscription Check
-    today = datetime.utcnow().date()
+    today = datetime.now().date()
     active_subscriptions = VisitorSubscription.query.filter(
         VisitorSubscription.visitor_id == tv.visitor_id,
         VisitorSubscription.start_date <= today,

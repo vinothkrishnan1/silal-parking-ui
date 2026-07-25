@@ -109,7 +109,7 @@ def add_vehicle():
             vehicle_category=vehicle_category,
             location_id=location_id if location_id and location_id != 'all' else None,
             status='in',
-            entry_time=datetime.utcnow()
+            entry_time=datetime.now()
         )
         
         db.session.add(new_vehicle)
@@ -204,7 +204,7 @@ def get_dashboard_data():
         from flask import request
         from models import ParkingSettings, TenantSubscription
         from datetime import datetime, timedelta
-        now = datetime.utcnow()
+        now = datetime.now()
         today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
         
         location_id = request.args.get('location_id')
@@ -431,7 +431,7 @@ def get_reports():
             for v in vehicles:
                 duration_str = "-"
                 if v.entry_time:
-                    end_time = v.exit_time or datetime.utcnow()
+                    end_time = v.exit_time or datetime.now()
                     diff = end_time - v.entry_time
                     hours = int(diff.total_seconds() // 3600)
                     minutes = int((diff.total_seconds() % 3600) // 60)
@@ -442,7 +442,7 @@ def get_reports():
                 
                 # Calculate local entry date using system timezone offset to avoid UTC mismatch (e.g. late night UTC is next day local)
                 now = datetime.now()
-                utcnow = datetime.utcnow()
+                utcnow = datetime.now()
                 tz_offset = now - utcnow
                 entry_date = (v.entry_time + tz_offset).date() if v.entry_time else now.date()
                 clean_plate = v.license_plate.replace(' ', '').lower() if v.license_plate else ''
