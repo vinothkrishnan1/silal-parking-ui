@@ -109,6 +109,8 @@ const Pricing = () => {
       name: '',
       description: '',
       price: '0.00',
+      duration_value: 30,
+      duration_unit: 'Days',
       start_date: '',
       end_date: '',
       is_active: true,
