@@ -29,33 +29,39 @@ def get_current_vehicles():
     
     vehicles = Vehicle.query.filter_by(status='in').order_by(Vehicle.entry_time.desc()).all()
     
-    today = datetime.utcnow().date()
+    today = datetime.now().date()
     result = []
     for v in vehicles:
         has_active_sub = False
-        if v.vehicle_category == 'Visitor' or v.vehicle_category is None:
-            visitor_vehicle = VisitorVehicle.query.filter_by(license_plate=v.license_plate).first()
-            if visitor_vehicle:
-                active_sub = VisitorSubscription.query.filter(
-                    VisitorSubscription.visitor_id == visitor_vehicle.visitor_id,
-                    VisitorSubscription.status == SUBSCRIPTION_STATUS_ACTIVE,
-                    VisitorSubscription.start_date <= today,
-                    VisitorSubscription.end_date >= today
-                ).first()
-                if active_sub:
-                    has_active_sub = True
-                    
+        clean_plate = v.license_plate.replace(' ', '').lower() if v.license_plate else ''
+        
+        sub = db.session.query(VisitorSubscription).join(
+            VisitorVehicle, VisitorSubscription.visitor_id == VisitorVehicle.visitor_id
+        ).filter(
+            func.replace(func.lower(VisitorVehicle.license_plate), ' ', '') == clean_plate,
+            VisitorSubscription.status == SUBSCRIPTION_STATUS_ACTIVE,
+            VisitorSubscription.start_date <= today,
+            VisitorSubscription.end_date >= today
+        ).first()
+
+        if sub:
+            has_active_sub = True
+
+        category = v.vehicle_category or 'Visitor'
+        if has_active_sub:
+            category = 'Subscriber'
+            
         result.append({
             'id': str(v.id),
             'license_plate': v.license_plate,
             'vehicleNumber': v.license_plate,
             'entryTime': v.entry_time.strftime('%Y-%m-%d %H:%M:%S'),
-            'type': v.vehicle_category or 'Visitor',
-            'vehicle_category': v.vehicle_category or 'Visitor',
+            'type': category,
+            'vehicle_category': category,
             'plateImage': 'https://placehold.co/300x100/333/white?text=' + v.license_plate,
             'exitTime': None,
             'paymentProcessedTime': v.payment_processed_at.strftime('%Y-%m-%d %H:%M:%S') if v.payment_processed_at else None,
-            'paymentStatus': 'waived' if has_active_sub else v.payment_status,
+            'paymentStatus': 'waived' if (has_active_sub or v.payment_status == 'waived') else v.payment_status,
             'hasActiveSubscription': has_active_sub
         })
     

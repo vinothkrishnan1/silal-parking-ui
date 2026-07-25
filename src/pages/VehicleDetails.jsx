@@ -501,7 +501,7 @@ const VehicleDetails = () => {
 
 
   const calculateParkingFee = (vehicle) => {
-    if (!vehicle || !vehicle.entryTime || vehicle.type === 'Staff' || vehicle.paymentStatus === 'waived' || vehicle.hasActiveSubscription) return '0.000';
+    if (!vehicle || !vehicle.entryTime || vehicle.type === 'Staff' || vehicle.type === 'Subscriber' || vehicle.paymentStatus === 'waived' || vehicle.hasActiveSubscription) return '0.000';
     const pricingTierData = mockTieredPricingData.find(p => p.isActive && p.name.includes('Standard Car Parking')) || mockTieredPricingData[0];
     if (!pricingTierData || !pricingTierData.tiers) return '0.000';
     const entryTime = new Date(vehicle.entryTime); const currentTime = new Date();
