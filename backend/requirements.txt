@@ -7,4 +7,5 @@ PyJWT
 flask-cors
 python-barcode
 requests
-PyMySQLgunicorn
+PyMySQL
+gunicorn
