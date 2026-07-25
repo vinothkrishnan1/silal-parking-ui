@@ -48,7 +48,7 @@ def list_slot_details():
         from models import WaivedUser, VisitorSubscription, SUBSCRIPTION_STATUS_ACTIVE, VisitorVehicle
         from datetime import datetime
         from services.subscription_status_service import sync_expired_subscriptions
-        today = datetime.utcnow().date()
+        today = datetime.now().date()
         try:
             sync_expired_subscriptions(today)
         except Exception:
@@ -63,9 +63,11 @@ def list_slot_details():
         all_staff = staff_query.all()
         active_staff_count = 0
         for staff in all_staff:
-            if staff.valid_from and today < staff.valid_from:
+            v_from = staff.valid_from.date() if isinstance(staff.valid_from, datetime) else staff.valid_from
+            v_until = staff.valid_until.date() if isinstance(staff.valid_until, datetime) else staff.valid_until
+            if v_from and today < v_from:
                 continue
-            if staff.valid_until and today > staff.valid_until:
+            if v_until and today > v_until:
                 continue
             active_staff_count += 1
 

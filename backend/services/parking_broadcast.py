@@ -7,7 +7,7 @@ def get_current_slot_status():
     try:
         from models import WaivedUser, VisitorSubscription, VisitorVehicle, SUBSCRIPTION_STATUS_ACTIVE
         from datetime import datetime
-        today = datetime.utcnow().date()
+        today = datetime.now().date()
 
         settings = ParkingSettings.query.first()
         if not settings:
@@ -18,9 +18,11 @@ def get_current_slot_status():
         all_staff = WaivedUser.query.all()
         active_staff_count = 0
         for staff in all_staff:
-            if staff.valid_from and today < staff.valid_from:
+            v_from = staff.valid_from.date() if isinstance(staff.valid_from, datetime) else staff.valid_from
+            v_until = staff.valid_until.date() if isinstance(staff.valid_until, datetime) else staff.valid_until
+            if v_from and today < v_from:
                 continue
-            if staff.valid_until and today > staff.valid_until:
+            if v_until and today > v_until:
                 continue
             active_staff_count += 1
 

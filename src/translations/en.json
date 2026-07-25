@@ -1,5 +1,6 @@
 {
     "dashboard":  {
+                      "allLocations": "All Locations",
                       "title":  "Dashboard",
                       "overview":  "Pro Parking Overview",
                       "visitorStaff":  "Visitor \u0026 Staff",
