@@ -78,7 +78,8 @@ def get_current_vehicles():
             'exitTime': None,
             'paymentProcessedTime': v.payment_processed_at.strftime('%Y-%m-%d %H:%M:%S') if v.payment_processed_at else None,
             'paymentStatus': 'waived' if (has_active_sub or is_staff or v.payment_status == 'waived') else v.payment_status,
-            'hasActiveSubscription': has_active_sub or is_staff
+            'hasActiveSubscription': has_active_sub or is_staff,
+            'location_id': str(v.location_id) if v.location_id else None
         })
     
     return jsonify(result), 200

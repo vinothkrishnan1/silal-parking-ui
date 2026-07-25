@@ -125,3 +125,9 @@
 [2026-07-26 01:59:47] Payment exit state updated: plate=KA03MX9175, vehicle_id=3, status=out, exit_time=2026-07-25T20:29:47.326791
 [2026-07-26 01:59:47] Payment barrier trigger start: plate=KA03MX9175, source_ip=None, gate_name=None, payment_status=waived
 [2026-07-26 01:59:47] Boom barrier failed to open for paid visitor: Plate=KA03MX9175. Error: No boom barrier device configured for source_ip=None gate_name=None
+[2026-07-26 02:16:21] Payment exit state updated: plate=AP39CT7412, vehicle_id=5, status=out, exit_time=2026-07-25T20:46:21.854457
+[2026-07-26 02:16:21] Payment barrier trigger start: plate=AP39CT7412, source_ip=None, gate_name=None, payment_status=paid
+[2026-07-26 02:16:21] Boom barrier failed to open for paid visitor: Plate=AP39CT7412. Error: No boom barrier device configured for source_ip=None gate_name=None
+[2026-07-26 02:21:25] Payment exit state updated: plate=MH12QL3068, vehicle_id=4, status=out, exit_time=2026-07-25T20:51:25.131071
+[2026-07-26 02:21:25] Payment barrier trigger start: plate=MH12QL3068, source_ip=None, gate_name=None, payment_status=waived
+[2026-07-26 02:21:25] Boom barrier failed to open for paid visitor: Plate=MH12QL3068. Error: No boom barrier device configured for source_ip=None gate_name=None
