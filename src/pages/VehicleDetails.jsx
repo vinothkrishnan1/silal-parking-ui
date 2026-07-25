@@ -34,6 +34,7 @@ const VehicleDetails = () => {
   const [paymentStep, setPaymentStep] = useState('initial');
   const [waiverRemarks, setWaiverRemarks] = useState('');
   const [addFormState, setAddFormState] = useState({ vehicleNumber: '', entryTime: '', type: 'Visitor', location_id: '', plateImage: 'https://placehold.co/300x100/333/white?text=NEW+PLATE' });
+  const [registrationCheck, setRegistrationCheck] = useState({ isChecking: false, isRegistered: false, type: null, locationId: null });
   const [slotData, setSlotData] = useState(null);
   const [tick, setTick] = useState(0);
   const [locations, setLocations] = useState([]);
@@ -92,10 +93,49 @@ const VehicleDetails = () => {
   }, []);
 
   useEffect(() => {
-    if (locations && locations.length > 0 && !addFormState.location_id) {
+    if (locations && locations.length > 0 && !addFormState.location_id && !registrationCheck.isRegistered) {
       setAddFormState(prev => ({ ...prev, location_id: locations[0].id.toString() }));
     }
   }, [locations]);
+
+  // Debounced vehicle registration check
+  useEffect(() => {
+    if (!showAddFormModal) return;
+    const plate = addFormState.vehicleNumber.trim();
+    if (plate.length < 3) {
+      setRegistrationCheck({ isChecking: false, isRegistered: false, type: null, locationId: null });
+      setAddFormState(prev => ({ ...prev, type: 'Visitor' }));
+      return;
+    }
+
+    setRegistrationCheck(prev => ({ ...prev, isChecking: true }));
+    const debounceTimer = setTimeout(async () => {
+      try {
+        const response = await fetch(apiUrl(`/api/vehicles/check-registration?plate=${encodeURIComponent(plate)}`));
+        if (response.ok) {
+          const data = await response.json();
+          if (data.is_registered) {
+            setRegistrationCheck({ isChecking: false, isRegistered: true, type: data.type, locationId: data.location_id });
+            setAddFormState(prev => ({ 
+              ...prev, 
+              type: data.type, 
+              location_id: data.location_id ? data.location_id.toString() : prev.location_id 
+            }));
+          } else {
+            setRegistrationCheck({ isChecking: false, isRegistered: false, type: null, locationId: null });
+            setAddFormState(prev => ({ ...prev, type: 'Visitor' }));
+          }
+        } else {
+          setRegistrationCheck({ isChecking: false, isRegistered: false, type: null, locationId: null });
+        }
+      } catch (err) {
+        console.error('Error checking registration:', err);
+        setRegistrationCheck({ isChecking: false, isRegistered: false, type: null, locationId: null });
+      }
+    }, 600);
+
+    return () => clearTimeout(debounceTimer);
+  }, [addFormState.vehicleNumber, showAddFormModal]);
 
   const fetchSlotData = async () => {
     try {
@@ -1263,21 +1303,25 @@ const VehicleDetails = () => {
                 <div>
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">{t('vehicles.type')}</label>
                   <select 
-                    className={`w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-premium-gold/50 bg-white font-bold cursor-pointer ${language === 'ar' ? 'text-right' : 'text-left'}`} 
+                    className={`w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-premium-gold/50 font-bold ${addFormState.vehicleNumber.trim().length > 0 ? 'bg-gray-100 opacity-70 cursor-not-allowed text-gray-500' : 'bg-white cursor-pointer'} ${language === 'ar' ? 'text-right' : 'text-left'}`} 
                     value={addFormState.type} 
                     onChange={(e) => setAddFormState({ ...addFormState, type: e.target.value })}
+                    disabled={addFormState.vehicleNumber.trim().length > 0}
                   >
                     <option value="Visitor">{t('dashboard.visitor')}</option>
                     <option value="Staff">{t('dashboard.staff')}</option>
+                    <option value="Subscriber">{t('dashboard.subscriber') || 'Subscriber'}</option>
+                    <option value="Tenant">{t('dashboard.tenant') || 'Tenant'}</option>
                   </select>
                 </div>
                 <div>
                   <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">{t('common.location') === 'common.location' ? 'Location' : (t('common.location') || 'Location')}</label>
                   <select 
-                    className={`w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-premium-gold/50 bg-white font-bold cursor-pointer ${language === 'ar' ? 'text-right' : 'text-left'}`} 
+                    className={`w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-premium-gold/50 font-bold ${registrationCheck.isRegistered ? 'bg-gray-100 opacity-70 cursor-not-allowed text-gray-500' : 'bg-white cursor-pointer'} ${language === 'ar' ? 'text-right' : 'text-left'}`} 
                     value={addFormState.location_id} 
                     onChange={(e) => setAddFormState({ ...addFormState, location_id: e.target.value })}
                     required
+                    disabled={registrationCheck.isRegistered}
                   >
                     <option value="">{t('common.all') === 'common.all' ? 'Select Location' : 'Select Location'}</option>
                     {locations.map(loc => (

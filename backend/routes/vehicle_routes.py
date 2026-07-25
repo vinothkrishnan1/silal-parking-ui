@@ -123,6 +123,76 @@ def add_vehicle():
         print(traceback.format_exc())
         return jsonify({"status": "error", "message": str(e)}), 500
 
+@vehicle_bp.route('/check-registration', methods=['GET'])
+def check_registration():
+    try:
+        from flask import request
+        from datetime import datetime
+        from models import VisitorSubscription, VisitorVehicle, TenantSubscription, TenantVehicle, WaivedUser
+        from sqlalchemy import func
+        
+        plate = request.args.get('plate', '').strip()
+        if not plate:
+            return jsonify({"is_registered": False})
+            
+        clean_plate = plate.replace(' ', '').lower()
+        today = datetime.now().date()
+        
+        # 1. Check Staff (WaivedUser)
+        staff_matches = WaivedUser.query.filter(
+            func.replace(func.lower(WaivedUser.license_plate), ' ', '').contains(clean_plate)
+        ).all()
+        for s in staff_matches:
+            v_from = s.valid_from.date() if isinstance(s.valid_from, datetime) else s.valid_from
+            v_until = s.valid_until.date() if isinstance(s.valid_until, datetime) else s.valid_until
+            if (not v_from or today >= v_from) and (not v_until or today <= v_until):
+                return jsonify({
+                    "is_registered": True,
+                    "type": "Staff",
+                    "location_id": s.location_id
+                })
+                
+        # 2. Check Visitor Subscription
+        vis_sub = db.session.query(VisitorSubscription).join(VisitorVehicle).filter(
+            func.replace(func.lower(VisitorVehicle.license_plate), ' ', '') == clean_plate,
+            VisitorSubscription.start_date <= today,
+            VisitorSubscription.end_date >= today,
+            VisitorSubscription.status == 'active'
+        ).first()
+        if vis_sub:
+            return jsonify({
+                "is_registered": True,
+                "type": "Subscriber",
+                "location_id": vis_sub.location_id
+            })
+            
+        # 3. Check Tenant Subscription
+        tenant_sub = db.session.query(TenantSubscription).join(TenantVehicle).filter(
+            func.replace(func.lower(TenantVehicle.license_plate), ' ', '') == clean_plate,
+            TenantSubscription.start_date <= today,
+            TenantSubscription.end_date >= today,
+            TenantSubscription.status == 'active'
+        ).first()
+        if tenant_sub:
+            # Note: We get the tenant location from the subscription's location_id if available,
+            # else we can look at the Tenant directly, but the model has it.
+            # However, TenantSubscription might not have location_id directly, let's assume it maps to Tenant.location_id
+            from models import Tenant
+            tenant = Tenant.query.get(tenant_sub.tenant_id)
+            return jsonify({
+                "is_registered": True,
+                "type": "Tenant",
+                "location_id": tenant.location_id if tenant else None
+            })
+            
+        return jsonify({"is_registered": False})
+        
+    except Exception as e:
+        import traceback
+        print(traceback.format_exc())
+        return jsonify({"is_registered": False, "error": str(e)})
+
+
 @vehicle_bp.route('/dashboard', methods=['GET'])
 def get_dashboard_data():
     """
@@ -367,10 +437,15 @@ def get_reports():
                 
                 # Check if vehicle entry is covered by an active visitor or tenant subscription
                 effective_payment_status = v.payment_status.capitalize() if v.payment_status else 'Pending'
-                entry_date = v.entry_time.date() if v.entry_time else datetime.utcnow().date()
+                
+                # Calculate local entry date using system timezone offset to avoid UTC mismatch (e.g. late night UTC is next day local)
+                now = datetime.now()
+                utcnow = datetime.utcnow()
+                tz_offset = now - utcnow
+                entry_date = (v.entry_time + tz_offset).date() if v.entry_time else now.date()
                 clean_plate = v.license_plate.replace(' ', '').lower() if v.license_plate else ''
                 
-                from models import VisitorSubscription, VisitorVehicle, TenantSubscription, TenantVehicle
+                from models import VisitorSubscription, VisitorVehicle, TenantSubscription, TenantVehicle, WaivedUser
                 has_vis_sub = db.session.query(VisitorSubscription).join(VisitorVehicle, VisitorSubscription.visitor_id == VisitorVehicle.visitor_id).filter(
                     func.replace(func.lower(VisitorVehicle.license_plate), ' ', '') == clean_plate,
                     VisitorSubscription.start_date <= entry_date,
@@ -384,19 +459,33 @@ def get_reports():
                     TenantSubscription.end_date >= entry_date,
                     TenantSubscription.status == 'active'
                 ).first() if not has_vis_sub else None
+
+                # Check staff pass (WaivedUser)
+                is_staff = False
+                if v.vehicle_category == 'Staff' or (not has_vis_sub and v.vehicle_category not in ('Tenant',)):
+                    staff_matches = WaivedUser.query.filter(
+                        func.replace(func.lower(WaivedUser.license_plate), ' ', '').contains(clean_plate)
+                    ).all()
+                    for s in staff_matches:
+                        v_from = s.valid_from.date() if isinstance(s.valid_from, datetime) else s.valid_from
+                        v_until = s.valid_until.date() if isinstance(s.valid_until, datetime) else s.valid_until
+                        if (not v_from or entry_date >= v_from) and (not v_until or entry_date <= v_until):
+                            is_staff = True
+                            break
                 
-                if (has_vis_sub or has_tenant_sub) and v.payment_status in ('not paid', 'pending', None):
+                if (has_vis_sub or has_tenant_sub or is_staff) and v.payment_status in ('not paid', 'pending', None, 'waived'):
                     effective_payment_status = 'Waived'
 
                 cat_lower = (v.vehicle_category or 'visitor').strip().lower()
-                if cat_lower in ('staff', 'employee'):
-                    v_type = 'Staff'
-                elif cat_lower in ('subscriber', 'subscription') or has_vis_sub or has_tenant_sub:
+                if has_vis_sub or has_tenant_sub:
                     v_type = 'Subscriber'
+                elif is_staff or cat_lower in ('staff', 'employee'):
+                    v_type = 'Staff'
                 elif cat_lower in ('tenant',):
                     v_type = 'Tenant'
                 else:
                     v_type = 'Visitor'
+
                 
                 result.append({
                     'id': f"vehicle_{v.id}",
