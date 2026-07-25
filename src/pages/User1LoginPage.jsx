@@ -26,8 +26,8 @@ const User1LoginPage = ({ onUser1Login }) => {
       <div className="w-full max-w-md p-8 space-y-8 bg-black text-premium-gold shadow-[inset_4px_0_0_0_#D4AF37] border-r border-premium-gold/20 rounded-lg font-sans">
         <div className="flex flex-col items-center">
            <img
-              src="/images/pro-parking-.png"
-              alt="Pro Parking Logo"
+              src="/images/silal-logo.png"
+              alt="Silal Logo"
               className="w-32 h-auto mb-6 object-contain brightness-0 invert" 
               onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
             />

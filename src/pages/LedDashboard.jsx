@@ -225,7 +225,7 @@ const LedDashboard = () => {
                   Premium LED Dashboard
                 </p>
                 <h1 className="font-logo text-xl font-black tracking-wide text-gray-900 md:text-3xl min-[1800px]:text-5xl">
-                  Boulevard Boutique Mall - Mall Parking
+                  Silal Central Market - Mall Parking
                 </h1>
                 <p className="mt-1 text-sm min-[1800px]:text-lg font-medium text-gray-500">
                   Full-screen live parking view

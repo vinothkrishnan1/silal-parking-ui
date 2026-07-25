@@ -329,7 +329,7 @@ const CameraConfig = () => {
                 Device Configuration
               </h1>
               <p className="text-gray-500 mt-1 font-medium">
-                Manage ANPR devices for Boulevard Pro Parking
+                Manage ANPR devices for Silal Pro Parking
               </p>
             </div>
             <button

@@ -68,12 +68,12 @@ const Sidebar = ({ onLogout, notifications, onMarkAsRead, onMarkAllAsRead, onCle
         <div className="px-6 py-6 border-b border-white/5 flex items-center justify-center relative backdrop-blur-sm">
           <div className="flex items-center justify-center">
             <img
-              src="/images/pro-parking-.png"
-              alt="Pro Parking Logo"
-              className="h-16 w-32 object-contain brightness-0 invert"
+              src="/images/silal-logo.png"
+              alt="Silal Logo"
+              className="h-16 w-32 object-contain"
               onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
             />
-            <span style={{ display: 'none' }} className="text-[#c6a87c] font-logo font-bold text-2xl tracking-widest">BOULEVARD</span>
+            <span style={{ display: 'none' }} className="text-[#c6a87c] font-logo font-bold text-2xl tracking-widest">SILAL</span>
           </div>
 
           <button
