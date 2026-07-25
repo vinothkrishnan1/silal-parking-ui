@@ -98,3 +98,15 @@
 [2026-07-26 00:40:18] Payment exit state updated: plate=REM EXPLICABO IN AP, vehicle_id=1, status=out, exit_time=2026-07-25T19:10:18.128389
 [2026-07-26 00:40:18] Payment barrier trigger start: plate=REM EXPLICABO IN AP, source_ip=None, gate_name=None, payment_status=waived
 [2026-07-26 00:40:18] Boom barrier failed to open for paid visitor: Plate=REM EXPLICABO IN AP. Error: No boom barrier device configured for source_ip=None gate_name=None
+[2026-07-26 00:43:34] Payment exit state updated: plate=45687, vehicle_id=2, status=out, exit_time=2026-07-25T19:13:34.343125
+[2026-07-26 00:43:34] Payment barrier trigger start: plate=45687, source_ip=None, gate_name=None, payment_status=waived
+[2026-07-26 00:43:34] Boom barrier failed to open for paid visitor: Plate=45687. Error: No boom barrier device configured for source_ip=None gate_name=None
+[2026-07-26 00:46:00] Payment exit state updated: plate=Modi debitis delenit, vehicle_id=3, status=out, exit_time=2026-07-25T19:16:00.392731
+[2026-07-26 00:46:00] Payment barrier trigger start: plate=Modi debitis delenit, source_ip=None, gate_name=None, payment_status=paid
+[2026-07-26 00:46:00] Boom barrier failed to open for paid visitor: Plate=Modi debitis delenit. Error: No boom barrier device configured for source_ip=None gate_name=None
+[2026-07-26 00:52:47] Payment exit state updated: plate=REM EXPLICABO IN AP, vehicle_id=4, status=out, exit_time=2026-07-25T19:22:47.442401
+[2026-07-26 00:52:47] Payment barrier trigger start: plate=REM EXPLICABO IN AP, source_ip=None, gate_name=None, payment_status=waived
+[2026-07-26 00:52:47] Boom barrier failed to open for paid visitor: Plate=REM EXPLICABO IN AP. Error: No boom barrier device configured for source_ip=None gate_name=None
+[2026-07-26 00:54:08] Payment exit state updated: plate=Modi debitis delenit, vehicle_id=5, status=out, exit_time=2026-07-25T19:24:08.343308
+[2026-07-26 00:54:08] Payment barrier trigger start: plate=Modi debitis delenit, source_ip=None, gate_name=None, payment_status=waived
+[2026-07-26 00:54:08] Boom barrier failed to open for paid visitor: Plate=Modi debitis delenit. Error: No boom barrier device configured for source_ip=None gate_name=None

@@ -122,7 +122,8 @@
                      "thankYou":  "Thank you for using Boulevard Pro Parking!",
                      "feeWaived":  "Parking Fee Waived",
                      "totalAmountPaid":  "Total Amount Paid",
-                     "enterWaiverReasonPlaceholder":  "Enter reason for waiver here..."
+                     "enterWaiverReasonPlaceholder":  "Enter reason for waiver here...",
+                     "sampleParkingTicket":  "Sample Parking Ticket"
                  },
     "common":  {
                    "loading":  "Loading...",
@@ -147,7 +148,10 @@
                    "updateSuccess":  "Record updated successfully.",
                    "update":  "Update",
                    "add":  "Add",
-                   "continue":  "Continue"
+                   "continue":  "Continue",
+                   "all":  "All",
+                   "location":  "Location",
+                   "refresh":  "Refresh"
                },
     "reports":  {
                     "title":  "Reports",
@@ -650,7 +654,9 @@
                     "userRole":  "User Role",
                     "uploadButton":  "Upload Image",
                     "permissionsLabel":  "Module Permissions",
-                    "user":  "User"
+                    "user":  "User",
+                    "role":  "Role",
+                    "status":  "Status"
                 },
     "durations":  {
                       "year":  "year",
@@ -829,5 +835,16 @@
         "retryConnection": "Retry Connection",
         "updateError": "Failed to update slot settings",
         "connectionErrorMessage": "Connection error occurred"
-    }
+    },
+    "visitor":  {
+                    "cancel":  "Cancel",
+                    "createVisitor":  "Create Subscription",
+                    "saveChanges":  "Save Changes",
+                    "delete":  "Delete"
+                },
+    "paymentReport":  {
+                         "cash":  "Cash",
+                         "card":  "Card",
+                         "print":  "Print"
+                     }
 }

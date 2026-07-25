@@ -110,6 +110,13 @@ const Passes = () => {
     fetchLocations();
   }, []);
 
+  // Auto-set the first location as default when locations load
+  React.useEffect(() => {
+    if (locations.length > 0 && !formData.locationId) {
+      setFormData(prev => ({ ...prev, locationId: String(locations[0].id) }));
+    }
+  }, [locations]);
+
   const filteredStaffPasses = staffPasses.filter(pass =>
     pass.staffName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (pass.vehicles && pass.vehicles.some(v => v.number.toLowerCase().includes(searchTerm.toLowerCase()))) ||
@@ -144,7 +151,11 @@ const Passes = () => {
 
   const handleAddPass = () => {
     setSelectedStaffPass(null);
-    setFormData(createEmptyFormData());
+    const emptyData = createEmptyFormData();
+    if (locations.length > 0 && !emptyData.locationId) {
+      emptyData.locationId = String(locations[0].id);
+    }
+    setFormData(emptyData);
     setShowForm(true);
   };
 

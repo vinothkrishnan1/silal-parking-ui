@@ -191,6 +191,13 @@ const VisitorVehicles = () => {
     loadPageData();
   }, []);
 
+  // Auto-set location_id to first location when locations load
+  useEffect(() => {
+    if (locations.length > 0 && !formData.location_id) {
+      setFormData(prev => ({ ...prev, location_id: String(locations[0].id) }));
+    }
+  }, [locations]);
+
   useEffect(() => {
     const handleVisitorMasterUpdate = () => {
       loadPageData({ refreshOnly: true });
@@ -350,7 +357,7 @@ const VisitorVehicles = () => {
     } else {
       setFormData({
         ...createInitialFormData(),
-        location_id: locations.length === 1 ? String(locations[0].id) : ''
+        location_id: locations.length > 0 ? String(locations[0].id) : ''
       });
     }
 

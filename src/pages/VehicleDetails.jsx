@@ -628,7 +628,7 @@ const VehicleDetails = () => {
         body: JSON.stringify({
           vehicleNumber: addFormState.vehicleNumber,
           type: addFormState.type,
-          location_id: addFormState.location_id
+          location_id: addFormState.location_id || (locations.length > 0 ? locations[0].id.toString() : '')
         })
       });
       
@@ -1966,7 +1966,15 @@ const VehicleDetails = () => {
                     </div>
                     <div>
                       <h4 className="font-black text-gray-900 text-lg leading-tight tracking-tight">{scannedVehicleData.vehicleNumber}</h4>
-                      <p className="text-xs font-bold text-premium-gold uppercase tracking-widest">{t(`dashboard.${scannedVehicleData.type.toLowerCase()}`) || scannedVehicleData.type}</p>
+                      <p className="text-xs font-bold text-premium-gold uppercase tracking-widest">
+                        {scannedVehicleData.type === 'Staff'
+                          ? (language === 'ar' ? 'موظف' : 'Staff')
+                          : scannedVehicleData.type === 'Subscriber'
+                          ? (language === 'ar' ? 'مشترك' : 'Subscriber')
+                          : scannedVehicleData.type === 'Tenant'
+                          ? (language === 'ar' ? 'مستأجر' : 'Tenant')
+                          : (language === 'ar' ? 'زائر' : 'Visitor')}
+                       </p>
                     </div>
                   </div>
 
@@ -1985,9 +1993,13 @@ const VehicleDetails = () => {
                     <div className="absolute top-0 right-0 p-2 opacity-5">
                       <DollarSign size={80} className="text-premium-gold" />
                     </div>
-                    {scannedVehicleData.paymentStatus === 'waived' ? (
+                    {(scannedVehicleData.paymentStatus === 'waived' || scannedVehicleData.type === 'Staff' || scannedVehicleData.type === 'Subscriber') ? (
                       <>
-                        <span className="text-xs font-black text-green-500 uppercase tracking-widest block mb-1">{language === 'ar' ? 'اشتراك فعال' : 'Active Subscription'}</span>
+                        <span className="text-xs font-black text-green-500 uppercase tracking-widest block mb-1">
+                          {scannedVehicleData.type === 'Staff'
+                            ? (language === 'ar' ? 'تصريح موظف' : 'Staff Pass')
+                            : (language === 'ar' ? 'اشتراك فعال' : 'Active Subscription')}
+                        </span>
                         <span className="text-2xl font-black text-green-600 drop-shadow-sm">{language === 'ar' ? 'لا يوجد رسوم مطلوبة' : 'No Payment Required'}</span>
                       </>
                     ) : (
@@ -1999,7 +2011,7 @@ const VehicleDetails = () => {
                   </div> 
 
                   <div className="flex flex-col gap-3 pt-2"> 
-                    {scannedVehicleData.paymentStatus === 'waived' ? (
+                    {(scannedVehicleData.paymentStatus === 'waived' || scannedVehicleData.type === 'Staff' || scannedVehicleData.type === 'Subscriber') ? (
                       <button className="ripple-button w-full px-4 py-4 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl font-black text-lg hover:shadow-lg hover:shadow-green-500/20 active:scale-95 transition-all" onClick={() => handleProcessPayment('Subscription')}>{language === 'ar' ? 'تسجيل الخروج' : 'Process Exit'}</button>
                     ) : (
                       <>

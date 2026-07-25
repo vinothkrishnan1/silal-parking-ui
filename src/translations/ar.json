@@ -122,7 +122,8 @@
                      "thankYou":  "شكراً لاستخدامكم بوليفارد برو باركينج!",
                      "feeWaived":  "تم الإعفاء من الرسوم",
                      "totalAmountPaid":  "إجمالي المبلغ المدفوع",
-                     "enterWaiverReasonPlaceholder":  "اكتب سبب الإعفاء هنا..."
+                     "enterWaiverReasonPlaceholder":  "اكتب سبب الإعفاء هنا...",
+                     "sampleParkingTicket":  "نموذج تذكرة الدخول"
                  },
     "common":  {
                    "loading":  "جاري التحميل...",
@@ -147,7 +148,10 @@
                    "updateSuccess":  "تم تحديث البيانات بنجاح.",
                    "update":  "تحديث",
                    "add":  "إضافة",
-                   "continue":  "متابعة"
+                   "continue":  "متابعة",
+                   "all":  "الكل",
+                   "location":  "الموقع",
+                   "refresh":  "تحديث"
                },
     "reports":  {
                     "title":  "التقارير",
@@ -650,7 +654,9 @@
                     "userRole":  "دور المستخدم",
                     "uploadButton":  "تحميل الصورة",
                     "permissionsLabel":  "صلاحيات الوصول",
-                    "user":  "المستخدم"
+                    "user":  "المستخدم",
+                    "role":  "الدور",
+                    "status":  "الحالة"
                 },
     "durations":  {
                       "year":  "سنة",
@@ -829,5 +835,16 @@
         "retryConnection": "إعادة المحاولة",
         "updateError": "فشل في تحديث إعدادات الأماكن",
         "connectionErrorMessage": "حدث خطأ في الاتصال"
-    }
+    },
+    "visitor":  {
+                    "cancel":  "إلغاء",
+                    "createVisitor":  "إنشاء اشتراك",
+                    "saveChanges":  "حفظ التغييرات",
+                    "delete":  "حذف"
+                },
+    "paymentReport":  {
+                         "cash":  "نقدي",
+                         "card":  "بطاقة",
+                         "print":  "طباعة"
+                     }
 }

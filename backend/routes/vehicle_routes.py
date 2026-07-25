@@ -24,7 +24,7 @@ def get_current_vehicles():
     """
     Returns a list of all vehicles currently in the parking area (status='in').
     """
-    from models import VisitorVehicle, VisitorSubscription, SUBSCRIPTION_STATUS_ACTIVE
+    from models import VisitorVehicle, VisitorSubscription, WaivedUser, SUBSCRIPTION_STATUS_ACTIVE
     from datetime import datetime
     
     vehicles = Vehicle.query.filter_by(status='in').order_by(Vehicle.entry_time.desc()).all()
@@ -33,8 +33,10 @@ def get_current_vehicles():
     result = []
     for v in vehicles:
         has_active_sub = False
+        is_staff = False
         clean_plate = v.license_plate.replace(' ', '').lower() if v.license_plate else ''
         
+        # Check active visitor subscription
         sub = db.session.query(VisitorSubscription).join(
             VisitorVehicle, VisitorSubscription.visitor_id == VisitorVehicle.visitor_id
         ).filter(
@@ -47,9 +49,23 @@ def get_current_vehicles():
         if sub:
             has_active_sub = True
 
+        # Check staff pass (WaivedUser)
+        if v.vehicle_category == 'Staff' or (not has_active_sub and v.vehicle_category not in ('Tenant',)):
+            staff = WaivedUser.query.filter(
+                func.replace(func.lower(WaivedUser.license_plate), ' ', '').contains(clean_plate)
+            ).all()
+            for s in staff:
+                v_from = s.valid_from.date() if isinstance(s.valid_from, datetime) else s.valid_from
+                v_until = s.valid_until.date() if isinstance(s.valid_until, datetime) else s.valid_until
+                if (not v_from or today >= v_from) and (not v_until or today <= v_until):
+                    is_staff = True
+                    break
+
         category = v.vehicle_category or 'Visitor'
         if has_active_sub:
             category = 'Subscriber'
+        elif is_staff:
+            category = 'Staff'
             
         result.append({
             'id': str(v.id),
@@ -61,11 +77,12 @@ def get_current_vehicles():
             'plateImage': 'https://placehold.co/300x100/333/white?text=' + v.license_plate,
             'exitTime': None,
             'paymentProcessedTime': v.payment_processed_at.strftime('%Y-%m-%d %H:%M:%S') if v.payment_processed_at else None,
-            'paymentStatus': 'waived' if (has_active_sub or v.payment_status == 'waived') else v.payment_status,
-            'hasActiveSubscription': has_active_sub
+            'paymentStatus': 'waived' if (has_active_sub or is_staff or v.payment_status == 'waived') else v.payment_status,
+            'hasActiveSubscription': has_active_sub or is_staff
         })
     
     return jsonify(result), 200
+
     
 @vehicle_bp.route('/add', methods=['POST'])
 def add_vehicle():
