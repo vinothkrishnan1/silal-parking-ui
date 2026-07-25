@@ -18,6 +18,7 @@
                       "overdueAlert":  "Overdue Vehicle Alert",
                       "noOverdue":  "No overdue vehicles right now.",
                       "visitor":  "Visitor",
+                      "subscriber": "Subscriber",
                       "staff":  "Staff",
                       "tenant":  "Tenant",
                       "omr":  "OMR",
